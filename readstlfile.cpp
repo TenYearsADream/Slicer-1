@@ -10,43 +10,40 @@
 
 using namespace std;
 
-
 bool ReadSTLFile::ReadStlFile(const char *cfilename)
 {
-    cfilename="F:/QT/Slicer/data/EiffelTower.stl";
-    qDebug()<<cfilename<<endl;
     FILE * pFile;
     long lSize;
     char* buffer;
     size_t result;
 
     /* 若要一个byte不漏地读入整个文件，只能采用二进制方式打开 */
-    fopen_s(&pFile,cfilename, "rb");
+    fopen_s(&pFile,cfilename, "rb");//fopen_s(指针,文件名,使用文件方式);其中指针是用来接收<指向打开的文件的指针>的指针
     if (pFile == NULL)
     {
         fputs("File error", stderr);
-        exit(1);
+        //exit(1);
     }
 
     /* 获取文件大小 */
-    fseek(pFile, 0, SEEK_END);
-    lSize = ftell(pFile);
-    rewind(pFile);
+    fseek(pFile, 0, SEEK_END);//控制件指针偏移
+    lSize = ftell(pFile);//得到文件位置指针当前位置相对于文件首的偏移字节数
+    rewind(pFile);//文件位置为给定流文件的开头
 
     /* 分配内存存储整个文件 */
     buffer = (char*)malloc(sizeof(char)*lSize);
     if (buffer == NULL)
     {
         fputs("Memory error", stderr);
-        exit(2);
+        //exit(2);
     }
 
     /* 将文件拷贝到buffer中 */
-    result = fread(buffer, 1, lSize, pFile);
+    result = fread(buffer, 1, lSize, pFile);//从给定流pFile读取数据到Buffer所指向的数组中
     if (result != lSize)
     {
         fputs("Reading error", stderr);
-        exit(3);
+        //exit(3);
     }
 
 
@@ -54,17 +51,19 @@ bool ReadSTLFile::ReadStlFile(const char *cfilename)
     fclose(pFile);
 
     ios::sync_with_stdio(false);
-    if (buffer[79]!='\0')//判断格式
+    if (buffer[0]=='s')//判断格式
     {
+        std::cout<<"ASCII文件"<<endl;
         ReadASCII(buffer);
     }
     else
     {
+        std::cout<<"Binary文件"<<endl;
         ReadBinary(buffer);
     }
     ios::sync_with_stdio(true);
 
-    free(buffer);
+    free(buffer);//释放内存
     return true;
 }
 
@@ -75,23 +74,25 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
     int i;
     string name, useless;
     stringstream ss(buffer);
-    ss >> name >> name;
+    getline(ss, name);//文件路径及文件名
     ss.get();
     do {
-        ss >> useless;
+        ss >> useless;//facet
         if (useless != "facet")
             break;
+        ss >> useless >> x >> y >>z;
+        pointList.push_back(Point3f(x, y, z));
         getline(ss, useless);
-        getline(ss, useless);
+        getline(ss, useless);//outer loop
         for (i = 0; i < 3; i++)
         {
             ss >> useless >> x >> y >> z;
             pointList.push_back(Point3f(x, y, z));
         }
         unTriangles++;
-        getline(ss, useless);
-        getline(ss, useless);
-        getline(ss, useless);
+        getline(ss, useless);//空行
+        getline(ss, useless);//end loop
+        getline(ss, useless);//end facet
     } while (1);
     return true;
 }
@@ -100,14 +101,14 @@ bool ReadSTLFile::ReadBinary(const char *buffer)
 {
     const char* p = buffer;
     char name[80];
-    int i, j;
-    memcpy(name, p, 80);
+    memcpy(name, p, 80);//80字节文件头
+    //cout<<name<<endl;
     p += 80;
-    unTriangles= cpyint(p);
-    for (i = 0; i < unTriangles; i++)
+    unTriangles= cpyint(p);//4字节三角面片个数
+    for (int i = 0; i<unTriangles; i++)
     {
-        p += 12;//跳过头部法向量
-        for (j = 0; j < 3; j++)//读取三顶点
+        pointList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
+        for (int j = 0; j < 3; j++)//读取三顶点
             pointList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));
         p += 2;//跳过尾部标志
     }

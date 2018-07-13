@@ -39,7 +39,6 @@ protected:
     GLfloat m_yRot;
     GLfloat m_zRot;
 
-
 };
 #endif // MYGLWIDGET
 

@@ -8,9 +8,9 @@ class ReadSTLFile
 public:
     bool ReadStlFile(const char *cfilename);
     int NumTri();
-    vector<Point3f>& PointList();
-private:
+    vector<Point3f>&PointList();
     vector<Point3f> pointList;
+private:
     unsigned int unTriangles;
     bool ReadASCII(const char *cfilename);
     bool ReadBinary(const char *cfilename);

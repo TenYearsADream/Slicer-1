@@ -26,6 +26,6 @@ public:
     {
         return Vertex(x, y, z);
     }
-private:
+public:
     float x, y, z;
 };
