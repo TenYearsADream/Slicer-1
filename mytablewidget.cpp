@@ -22,3 +22,16 @@ void MyTableWidget::slotItemClicked(QTableWidgetItem *item)
     emit rowClicked(row);
     //qDebug()<<"You clicked!"<<row<<endl;
 }
+
+void MyTableWidget::setData(float faceArray[][9], int nFaceCount)
+{
+    int columnCount = sizeof(faceArray[0])/sizeof(faceArray[0][0]);
+    for(int i=0; i< nFaceCount; i++)
+    {
+        for (int j=0;j<columnCount;j++)
+        {
+            this->setItem(i,j, new QTableWidgetItem(QString::number(faceArray[i][j],'f',2)));
+        }
+
+    }
+}

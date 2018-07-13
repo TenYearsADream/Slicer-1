@@ -15,11 +15,15 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     myglwidget.cpp \
-    mytablewidget.cpp
+    mytablewidget.cpp \
+    point3f.cpp \
+    readstlfile.cpp
 
 HEADERS  += mainwindow.h \
     myglwidget.h \
-    mytablewidget.h
+    mytablewidget.h \
+    point3f.h \
+    readstlfile.h
 
 DISTFILES += \
     resource/open-file.png
