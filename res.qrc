@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/images">
+        <file alias="file-open">resource/open-file.png</file>
+    </qresource>
+</RCC>
