@@ -54,11 +54,13 @@ bool ReadSTLFile::ReadStlFile(const char *cfilename)
     if (buffer[0]=='s')//判断格式
     {
         std::cout<<"ASCII文件"<<endl;
+        vector<Point3f>().swap(pointList);
         ReadASCII(buffer);
     }
     else
     {
         std::cout<<"Binary文件"<<endl;
+        vector<Point3f>().swap(pointList);
         ReadBinary(buffer);
     }
     ios::sync_with_stdio(true);
@@ -71,11 +73,33 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
 {
     unTriangles = 0;
     float x, y, z;
-    int i;
     string name, useless;
     stringstream ss(buffer);
     getline(ss, name);//文件路径及文件名
     ss.get();
+    //提取第一个面片，得到最大最小值初始值
+    ss >> useless;//facet
+    ss >> useless >> x >> y >>z;
+    pointList.push_back(Point3f(x, y, z));
+    getline(ss, useless);
+    getline(ss, useless);//outer loop
+    for (int i = 0; i < 3; i++)
+    {
+        ss >> useless >> x >> y >> z;
+        pointList.push_back(Point3f(x, y, z));
+    }
+    surroundBox[0]=qMin(pointList.at(0).x,pointList.at(1).x);
+    surroundBox[1]=qMax(pointList.at(0).x,pointList.at(1).x);
+    surroundBox[2]=qMin(pointList.at(0).y,pointList.at(1).y);
+    surroundBox[3]=qMax(pointList.at(0).y,pointList.at(1).y);
+    surroundBox[4]=qMin(pointList.at(0).z,pointList.at(1).z);
+    surroundBox[5]=qMax(pointList.at(0).z,pointList.at(1).z);
+    unTriangles++;
+    getline(ss, useless);//空行
+    getline(ss, useless);//end loop
+    getline(ss, useless);//end facet
+
+    //读取其他面片
     do {
         ss >> useless;//facet
         if (useless != "facet")
@@ -84,9 +108,15 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
         pointList.push_back(Point3f(x, y, z));
         getline(ss, useless);
         getline(ss, useless);//outer loop
-        for (i = 0; i < 3; i++)
+        for (int i = 0; i < 3; i++)
         {
             ss >> useless >> x >> y >> z;
+            surroundBox[0]=qMin(surroundBox[0],x);
+            surroundBox[1]=qMax(surroundBox[1],x);
+            surroundBox[2]=qMin(surroundBox[2],y);
+            surroundBox[3]=qMax(surroundBox[3],y);
+            surroundBox[4]=qMin(surroundBox[4],z);
+            surroundBox[5]=qMax(surroundBox[5],z);
             pointList.push_back(Point3f(x, y, z));
         }
         unTriangles++;
@@ -101,15 +131,40 @@ bool ReadSTLFile::ReadBinary(const char *buffer)
 {
     const char* p = buffer;
     char name[80];
+    float x,y,z;
     memcpy(name, p, 80);//80字节文件头
     //cout<<name<<endl;
     p += 80;
     unTriangles= cpyint(p);//4字节三角面片个数
-    for (int i = 0; i<unTriangles; i++)
+    //提取第一个面片，得到最大最小值初始值
+    pointList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
+    for (int j = 0; j < 3; j++)//读取三顶点
+    {
+        x=cpyfloat(p);y=cpyfloat(p);z=cpyfloat(p);
+        pointList.push_back(Point3f(x, y, z));
+    }
+    surroundBox[0]=qMin(pointList.at(0).x,pointList.at(1).x);
+    surroundBox[1]=qMax(pointList.at(0).x,pointList.at(1).x);
+    surroundBox[2]=qMin(pointList.at(0).y,pointList.at(1).y);
+    surroundBox[3]=qMax(pointList.at(0).y,pointList.at(1).y);
+    surroundBox[4]=qMin(pointList.at(0).z,pointList.at(1).z);
+    surroundBox[5]=qMax(pointList.at(0).z,pointList.at(1).z);
+    p += 2;//跳过尾部标志
+
+    for (int i = 1; i<unTriangles; i++)
     {
         pointList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
         for (int j = 0; j < 3; j++)//读取三顶点
-            pointList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));
+        {
+            x=cpyfloat(p);y=cpyfloat(p);z=cpyfloat(p);
+            surroundBox[0]=qMin(surroundBox[0],x);
+            surroundBox[1]=qMax(surroundBox[1],x);
+            surroundBox[2]=qMin(surroundBox[2],y);
+            surroundBox[3]=qMax(surroundBox[3],y);
+            surroundBox[4]=qMin(surroundBox[4],z);
+            surroundBox[5]=qMax(surroundBox[5],z);
+            pointList.push_back(Point3f(x, y, z));
+        }
         p += 2;//跳过尾部标志
     }
     return true;

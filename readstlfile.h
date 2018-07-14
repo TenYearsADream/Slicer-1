@@ -10,6 +10,7 @@ public:
     int NumTri();
     vector<Point3f>&PointList();
     vector<Point3f> pointList;
+    float  surroundBox[6];
 private:
     unsigned int unTriangles;
     bool ReadASCII(const char *cfilename);

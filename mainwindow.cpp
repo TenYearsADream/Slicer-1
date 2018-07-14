@@ -1,5 +1,4 @@
-﻿
-#include <QAction>
+﻿#include <QAction>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QStatusBar>
@@ -13,9 +12,10 @@
 #include <QSplitter>
 #include <QTableView>
 #include <QDebug>
-
+#include <Qtime>
 #include "mainwindow.h"
 
+using namespace std;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -34,10 +34,8 @@ MainWindow::MainWindow(QWidget *parent)
     this->setCentralWidget(cenWidget);
 
     opengl= new MyGLWidget(cenWidget);
-    opengl->nFaceCount = nFaceCount;
     tableWidget =new MyTableWidget((cenWidget));
     connect(tableWidget,SIGNAL(rowClicked(int)),opengl,SLOT(changeColorFlag(int)));
-
     QPushButton *button = new QPushButton(tr("useless"),(cenWidget));
 
     QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
@@ -47,7 +45,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     rightlayout->addWidget(tableWidget);
     rightlayout->addWidget(button);
-
     splitter->addWidget(opengl);
     splitter->setMinimumWidth(400);
     splitter->setMinimumHeight(400);
@@ -73,11 +70,22 @@ void MainWindow::openFile()
     if(!path.isEmpty()) {
         readstl.ReadStlFile(filepath);
         qDebug()<<"number of faces:"<<readstl.NumTri()<<endl;
-        qDebug()<<readstl.PointList().size()<<endl;
-        qDebug()<<readstl.pointList.at(0).x<<endl;
-        tableWidget->setRowCount(readstl.NumTri());
-        tableWidget->setData(readstl.pointList,readstl.NumTri());
-        tableWidget->show();
+        qDebug()<<"nuber of vertexs:"<<readstl.PointList().size()<<endl;
+        //qDebug()<<readstl.pointList.at(0).x<<endl;
+        //qDebug()<<readstl.surroundBox[1]<<endl;
+        QTime time;
+        time.start();
+        //tableWidget->setRowCount(readstl.NumTri());
+        //tableWidget->setData(readstl.pointList,readstl.NumTri());
+        //tableWidget->show();
+        qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
+        time.start();
+        opengl->m_xMove=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
+        opengl->m_yMove=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
+        opengl->zoom=-3.0*qMax(qAbs(readstl.surroundBox[4]),qAbs(readstl.surroundBox[5]))-50.0;
+        opengl->nFaceCount=readstl.NumTri();
+        opengl->pointList=readstl.pointList;
+        qDebug()<<"time of OpenGl:"<<time.elapsed()/1000.0/1000.0<<"s";
 
     } else {
         QMessageBox::warning(this, tr("Path"),

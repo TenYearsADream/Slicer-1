@@ -1,17 +1,21 @@
 ﻿#ifndef MYGLWIDGET
 #define MYGLWIDGET
 #include <QGLWidget>
+#include "point3f.h"
 class QTimer;
-
+using namespace std;
 class MyGLWidget : public QGLWidget
 {
     Q_OBJECT
 public:
     explicit MyGLWidget(QWidget *parent = 0);
     void resizeGL(int w, int h);
-    float faceArray[4][9];
-    size_t nFaceCount;
-    bool ColorFlag[4];
+    vector<Point3f> pointList;
+    int nFaceCount;
+    bool ColorFlag[1000000];
+    GLfloat m_xMove;
+    GLfloat m_yMove;
+    GLfloat zoom;
 public slots:
     void changeColorFlag(int row);
 private:
@@ -30,10 +34,7 @@ protected:
     void setZRotation(int angle);
     void qNormalizeAngle(int &angle);
 protected:
-    GLfloat m_xMove;
-    GLfloat m_yMove;
     QPoint m_lastPos;
-    GLfloat zoom;
     GLfloat rQuad;
     GLfloat m_xRot;
     GLfloat m_yRot;

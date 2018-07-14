@@ -9,7 +9,7 @@
 MyGLWidget::MyGLWidget(QWidget *parent) :
     QGLWidget(parent)
 {
-    zoom=-5;
+    zoom=-10;
     rQuad = 0.0;
     for (int i=0;i<sizeof(ColorFlag);i++)
     {
@@ -43,7 +43,7 @@ void MyGLWidget::resizeGL(int width, int height)
     glLoadIdentity();                  // Reset The Projection Matrix
 
     // Calculate The Aspect Ratio Of The Window
-    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
+    gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,1.0f,zoom);
 
     glMatrixMode(GL_MODELVIEW);      // Select The Modelview Matrix
     glLoadIdentity();                // Reset The Modelview Matrix
@@ -54,43 +54,33 @@ void MyGLWidget::paintGL()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  // Clear The Screen And The Depth Buffer
     glLoadIdentity();       // Reset The Current Modelview Matrix
-
     glTranslatef(  m_xMove,  -m_yMove, zoom );
+    //qDebug()<<zoom<<endl;
     glRotatef(m_xRot / 16.0f, 1, 0, 0);
     glRotatef(m_yRot / 16.0f, 0, 1, 0);
     glRotatef(m_zRot / 16.0f, 0, 0, 1);
     glRotatef( rQuad,  1.0,  1.0,  1.0 );
-    glBegin( GL_QUADS );
-        glColor3f( 0.0, 1.0, 0.0 );
-        glVertex3f(  1.0,  -1.0,  1.0 );
-        glVertex3f( 1.0, -1.0,  -1.0 );
-        glVertex3f(  -1.0, -1.0,  -1.0 );
-        glVertex3f(  -1.0, -1.0,  1.0 );
-    glEnd();
-
     glBegin( GL_TRIANGLES );
         for (int i=0;i<nFaceCount;i++)
         {
            if (ColorFlag[i])
            {
-               glColor3f( 1.0, 0.0, 0.0 );
-               glVertex3f(faceArray[i][0],faceArray[i][1],faceArray[i][2]);
-               glColor3f( 0.0, 1.0, 0.0 );
-               glVertex3f(faceArray[i][3],faceArray[i][4],faceArray[i][5]);
-               glColor3f( 0.0, 0.0, 1.0 );
-               glVertex3f(faceArray[i][6],faceArray[i][7],faceArray[i][8]);
+               glColor3f( 0.7, 0.7, 0.7 );
+               glVertex3f(pointList.at(4*i+1).x,pointList.at(4*i+1).y,pointList.at(4*i+1).z);
+               glVertex3f(pointList.at(4*i+2).x,pointList.at(4*i+2).y,pointList.at(4*i+2).z);
+               glVertex3f(pointList.at(4*i+3).x,pointList.at(4*i+3).y,pointList.at(4*i+3).z);
+
            }
            else
            {
                glColor3f( 1.0, 0.0, 0.0 );
-               glVertex3f(faceArray[i][0],faceArray[i][1],faceArray[i][2]);
-               glVertex3f(faceArray[i][3],faceArray[i][4],faceArray[i][5]);
-               glVertex3f(faceArray[i][6],faceArray[i][7],faceArray[i][8]);
+               glVertex3f(pointList.at(4*i+1).x,pointList.at(4*i+1).y,pointList.at(4*i+1).z);
+               glVertex3f(pointList.at(4*i+2).x,pointList.at(4*i+2).y,pointList.at(4*i+2).z);
+               glVertex3f(pointList.at(4*i+3).x,pointList.at(4*i+3).y,pointList.at(4*i+3).z);
            }
-
         }
     glEnd();
-    rQuad -= 0.15;
+    //rQuad -= 0.15;
 }
 
 void MyGLWidget::wheelEvent(QWheelEvent *e)
@@ -100,13 +90,13 @@ void MyGLWidget::wheelEvent(QWheelEvent *e)
     bool bUpdate = false;
     if(iMag > 0)
     {
-        zoom += 0.5;
+        zoom += 10;
         bUpdate = true;
     }
 
     if(iMag < 0)
     {
-        zoom -= 0.5;
+        zoom -= 10;
         bUpdate = true;
 
     }
@@ -134,8 +124,8 @@ void MyGLWidget::mouseMoveEvent(QMouseEvent *event)
     float dy = event->y() - m_lastPos.y();
     if (event->buttons() & Qt::LeftButton)
         {
-           m_xMove+=dx/100;
-           m_yMove+=dy/100;
+           m_xMove+=dx/5;
+           m_yMove+=dy/5;
            update();
         }
         if (event->buttons() & Qt::RightButton)

@@ -12,13 +12,32 @@ MyTableWidget::MyTableWidget(QWidget *parent) :
     this->setHorizontalHeaderLabels(headers);
     this->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     this->setSelectionBehavior(QAbstractItemView::SelectRows); //整行选中的方式
-
+    this->setStyleSheet("background-color:rgba(144,238,144,1)");
     connect(this,SIGNAL(itemPressed(QTableWidgetItem*)),this,SLOT(slotItemClicked(QTableWidgetItem *)));
 }
 
 void MyTableWidget::slotItemClicked(QTableWidgetItem *item)
 {
     int row=item->row();
+    //qDebug()<< item->backgroundColor()<<endl;
+    if(item->backgroundColor()=="QColor(Invalid)" || item->backgroundColor()==QColor(144,238,144))
+    {
+        for(int i=0;i<12;i++)
+        {
+            QTableWidgetItem *selectedItem =  this->item(row,i);
+            selectedItem->setBackgroundColor(Qt::red);
+        }
+    }
+    else
+    {
+        for(int i=0;i<12;i++)
+        {
+            QTableWidgetItem *selectedItem =  this->item(row,i);
+            selectedItem->setBackgroundColor(QColor(144,238,144));
+        }
+        //qDebug()<< item->backgroundColor()<<endl;
+
+    }
     emit rowClicked(row);
     //qDebug()<<"You clicked!"<<row<<endl;
 }
@@ -29,10 +48,9 @@ void MyTableWidget::setData(vector<Point3f> pointList, int nFaceCount)
     {
         for (int j=0;j<4;j++)
         {
-            qDebug()<<pointList.at(j).x<<endl;
-//            this->setItem(i,3*j+0, new QTableWidgetItem(QString::number(pointList.at(4*nFaceCount+j).x,'f',2)));
-//            this->setItem(i,3*j+1, new QTableWidgetItem(QString::number(pointList.at(4*nFaceCount+j).y,'f',2)));
-//            this->setItem(i,3*j+2, new QTableWidgetItem(QString::number(pointList.at(4*nFaceCount+j).z,'f',2)));
+            this->setItem(i,3*j+0, new QTableWidgetItem(QString::number(pointList.at(4*i+j).x,'f',2)));
+            this->setItem(i,3*j+1, new QTableWidgetItem(QString::number(pointList.at(4*i+j).y,'f',2)));
+            this->setItem(i,3*j+2, new QTableWidgetItem(QString::number(pointList.at(4*i+j).z,'f',2)));
         }
 
     }
