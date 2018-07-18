@@ -75,9 +75,9 @@ void MainWindow::openFile()
         //qDebug()<<readstl.surroundBox[1]<<endl;
         QTime time;
         time.start();
-        //tableWidget->setRowCount(readstl.NumTri());
-        //tableWidget->setData(readstl.pointList,readstl.NumTri());
-        //tableWidget->show();
+        tableWidget->setRowCount(readstl.NumTri());
+        tableWidget->setData(readstl.pointList,readstl.NumTri());
+        tableWidget->show();
         qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
         time.start();
         opengl->m_xMove=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;

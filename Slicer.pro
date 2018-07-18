@@ -35,3 +35,15 @@ QT +=opengl
 windows {
      DEFINES *= Q_COMPILER_INITIALIZER_LISTS
 }
+
+INCLUDEPATH += E:/ProgramFiles/boost_1_59_0 \
+                E:/ProgramFiles/CGAL/include \
+
+INCLUDEPATH += $$PWD/bin
+DEPENDPATH += $$PWD/bin
+LIBS += -L$$PWD/bin/ -lCGAL-vc120-mt-4.11
+LIBS += -L$$PWD/bin/ -lCGAL_Core-vc120-mt-4.11
+LIBS += -L$$PWD/bin/ -lCGAL_ImageIO-vc120-mt-4.11
+LIBS += -L$$PWD/bin/ -lCGAL_Qt5-vc120-mt-4.11
+LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-1_59
+LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-1_59
