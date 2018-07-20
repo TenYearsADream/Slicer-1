@@ -16,6 +16,7 @@
 #include "mainwindow.h"
 
 using namespace std;
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
@@ -68,24 +69,31 @@ void MainWindow::openFile()
                                                tr("Text Files(*.stl)"));
     const char* filepath=path.toStdString().c_str();//QString转化为string类型，然后由string转化char*
     if(!path.isEmpty()) {
-        readstl.ReadStlFile(filepath);
-        qDebug()<<"number of faces:"<<readstl.NumTri()<<endl;
-        qDebug()<<"nuber of vertexs:"<<readstl.PointList().size()<<endl;
-        //qDebug()<<readstl.pointList.at(0).x<<endl;
-        //qDebug()<<readstl.surroundBox[1]<<endl;
         QTime time;
         time.start();
+        readstl.ReadStlFile(filepath);
+        qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";
+        //qDebug()<<"number of faces:"<<readstl.NumTri()<<endl;
+        //qDebug()<<readstl.surroundBox[1]<<endl;
+        time.start();
         tableWidget->setRowCount(readstl.NumTri());
-        tableWidget->setData(readstl.pointList,readstl.NumTri());
+        tableWidget->setData(readstl.hashtable->vertices,readstl.faceList);
         tableWidget->show();
         qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
         time.start();
         opengl->m_xMove=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
         opengl->m_yMove=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
         opengl->zoom=-3.0*qMax(qAbs(readstl.surroundBox[4]),qAbs(readstl.surroundBox[5]))-50.0;
-        opengl->nFaceCount=readstl.NumTri();
-        opengl->pointList=readstl.pointList;
+        opengl->vertices=readstl.hashtable->vertices;
+        opengl->faceList=readstl.faceList;
         qDebug()<<"time of OpenGl:"<<time.elapsed()/1000.0/1000.0<<"s";
+
+        //shapediameterfunction->ConstructMesh(readstl.pointList,readstl.NumTri());
+        //shapediameterfunction->show();
+
+        //readstl.hashtable->show();
+        qDebug()<<"number of vertices:"<<readstl.hashtable->size;
+        qDebug()<<"number of faces:"<<readstl.faceList.size()<<endl;
 
     } else {
         QMessageBox::warning(this, tr("Path"),

@@ -17,13 +17,17 @@ SOURCES += main.cpp\
     myglwidget.cpp \
     mytablewidget.cpp \
     point3f.cpp \
-    readstlfile.cpp
+    readstlfile.cpp \
+    shapediameterfunction.cpp \
+    hashtable.cpp
 
 HEADERS  += mainwindow.h \
     myglwidget.h \
     mytablewidget.h \
     point3f.h \
-    readstlfile.h
+    readstlfile.h \
+    shapediameterfunction.h \
+    hashtable.h
 
 DISTFILES += \
     resource/open-file.png
@@ -37,7 +41,9 @@ windows {
 }
 
 INCLUDEPATH += E:/ProgramFiles/boost_1_59_0 \
-                E:/ProgramFiles/CGAL/include \
+               E:/ProgramFiles/CGAL/include \
+               E:/ProgramFiles/CGAL/auxiliary/gmp/include \
+               E:/ProgramFiles/CGAL/build/include \
 
 INCLUDEPATH += $$PWD/bin
 DEPENDPATH += $$PWD/bin
@@ -47,3 +53,5 @@ LIBS += -L$$PWD/bin/ -lCGAL_ImageIO-vc120-mt-4.11
 LIBS += -L$$PWD/bin/ -lCGAL_Qt5-vc120-mt-4.11
 LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-1_59
 LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-1_59
+LIBS += -L$$PWD/bin/ -llibmpfr-4
+LIBS += -L$$PWD/bin/ -llibgmp-10

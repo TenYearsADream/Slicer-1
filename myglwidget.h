@@ -2,6 +2,7 @@
 #define MYGLWIDGET
 #include <QGLWidget>
 #include "point3f.h"
+#include "hashtable.h"
 class QTimer;
 using namespace std;
 class MyGLWidget : public QGLWidget
@@ -10,7 +11,9 @@ class MyGLWidget : public QGLWidget
 public:
     explicit MyGLWidget(QWidget *parent = 0);
     void resizeGL(int w, int h);
-    vector<Point3f> pointList;
+    //vector<Point3f> pointList;
+    vector<Point3f> faceList;
+    vector <tableNode *> vertices;
     int nFaceCount;
     bool ColorFlag[1000000];
     GLfloat m_xMove;

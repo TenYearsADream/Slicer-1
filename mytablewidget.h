@@ -2,14 +2,15 @@
 #define MYTABLEWIDGET
 #include <QTableWidget>
 #include "point3f.h"
-
+#include "hashtable.h"
 using namespace std;
+
 class MyTableWidget : public QTableWidget
 {
     Q_OBJECT
 public:
     explicit MyTableWidget(QWidget *parent = 0);
-    void setData(vector<Point3f> pointList, int nFaceCount);
+    void setData(vector <tableNode *> vertices, vector<Point3f> faceList);
 private slots:
     void slotItemClicked(QTableWidgetItem*);
 signals:

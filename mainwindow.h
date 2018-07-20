@@ -8,6 +8,8 @@
 #include "myglwidget.h"
 #include "mytablewidget.h"
 #include "readstlfile.h"
+#include "shapediameterfunction.h"
+
 using namespace std;
 class MainWindow : public QMainWindow
 {
@@ -17,13 +19,13 @@ public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
     int nFaceCount=0;
-    float Array[4][9];
     ReadSTLFile readstl;
 private:
     void openFile();
     QAction *openAction;
     MyGLWidget *opengl;
     MyTableWidget *tableWidget;
+    ShapeDiameterFunction *shapediameterfunction;
     bool ReadASCII(uchar *buffer);
     bool ReadBinary(uchar *buffer);
 };

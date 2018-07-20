@@ -61,22 +61,25 @@ void MyGLWidget::paintGL()
     glRotatef(m_zRot / 16.0f, 0, 0, 1);
     glRotatef( rQuad,  1.0,  1.0,  1.0 );
     glBegin( GL_TRIANGLES );
-        for (int i=0;i<nFaceCount;i++)
+        for (int i=0;i<faceList.size();i++)
         {
+           tableNode *v1 = vertices[faceList.at(i).x];
+           tableNode *v2 = vertices[faceList.at(i).y];
+           tableNode *v3 = vertices[faceList.at(i).z];
            if (ColorFlag[i])
            {
                glColor3f( 0.7, 0.7, 0.7 );
-               glVertex3f(pointList.at(4*i+1).x,pointList.at(4*i+1).y,pointList.at(4*i+1).z);
-               glVertex3f(pointList.at(4*i+2).x,pointList.at(4*i+2).y,pointList.at(4*i+2).z);
-               glVertex3f(pointList.at(4*i+3).x,pointList.at(4*i+3).y,pointList.at(4*i+3).z);
+               glVertex3f(v1->point.x,v1->point.y,v1->point.z);
+               glVertex3f(v2->point.x,v2->point.y,v2->point.z);
+               glVertex3f(v3->point.x,v3->point.y,v3->point.z);
 
            }
            else
            {
                glColor3f( 1.0, 0.0, 0.0 );
-               glVertex3f(pointList.at(4*i+1).x,pointList.at(4*i+1).y,pointList.at(4*i+1).z);
-               glVertex3f(pointList.at(4*i+2).x,pointList.at(4*i+2).y,pointList.at(4*i+2).z);
-               glVertex3f(pointList.at(4*i+3).x,pointList.at(4*i+3).y,pointList.at(4*i+3).z);
+               glVertex3f(v1->point.x,v1->point.y,v1->point.z);
+               glVertex3f(v2->point.x,v2->point.y,v2->point.z);
+               glVertex3f(v3->point.x,v3->point.y,v3->point.z);
            }
         }
     glEnd();

@@ -1,12 +1,13 @@
 ﻿#pragma once
 #include <vector>
 #include <fstream>
-#include"Point3f.h"
 #include <iostream>
 #include <string>
-#include"readstlfile.h"
 #include <sstream>
 #include <QDebug>
+
+#include"Point3f.h"
+#include"readstlfile.h"
 
 using namespace std;
 
@@ -54,13 +55,15 @@ bool ReadSTLFile::ReadStlFile(const char *cfilename)
     if (buffer[0]=='s')//判断格式
     {
         std::cout<<"ASCII文件"<<endl;
-        vector<Point3f>().swap(pointList);
+        vector<Point3f>().swap(normalList);//清空vector
+        vector<Point3f>().swap(faceList);
         ReadASCII(buffer);
     }
     else
     {
         std::cout<<"Binary文件"<<endl;
-        vector<Point3f>().swap(pointList);
+        vector<Point3f>().swap(normalList);
+        vector<Point3f>().swap(faceList);
         ReadBinary(buffer);
     }
     ios::sync_with_stdio(true);
@@ -73,27 +76,39 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
 {
     unTriangles = 0;
     float x, y, z;
-    string name, useless;
-    stringstream ss(buffer);
+    char idx[10],idy[10],idz[10];
+    size_t index[3];
+    long long ID;
+    hashtable = new HashTable;
+    string name, useless,id;
+    stringstream ss(buffer),stream;
     getline(ss, name);//文件路径及文件名
     ss.get();
     //提取第一个面片，得到最大最小值初始值
     ss >> useless;//facet
-    ss >> useless >> x >> y >>z;
-    pointList.push_back(Point3f(x, y, z));
+    ss >> useless >> x >> y >>z;//法向量
+    normalList.push_back(Point3f(x, y, z));
     getline(ss, useless);
     getline(ss, useless);//outer loop
     for (int i = 0; i < 3; i++)
     {
         ss >> useless >> x >> y >> z;
-        pointList.push_back(Point3f(x, y, z));
+        sprintf_s(idx, "%.2f", qAbs(x));sprintf_s(idy, "%.2f",qAbs(y));sprintf_s(idz, "%.2f", qAbs(z));
+        id=(string)idx+(string)idy+(string)idz;
+        id=id.replace(id.find("."),1,"");
+        id=id.replace(id.find("."),1,"");
+        id=id.replace(id.find("."),1,"");
+        stream.clear();
+        stream<<id;stream>>ID;
+        index[i]=hashtable->addPoint(ID,Point3f(x,y,z));
     }
-    surroundBox[0]=qMin(pointList.at(0).x,pointList.at(1).x);
-    surroundBox[1]=qMax(pointList.at(0).x,pointList.at(1).x);
-    surroundBox[2]=qMin(pointList.at(0).y,pointList.at(1).y);
-    surroundBox[3]=qMax(pointList.at(0).y,pointList.at(1).y);
-    surroundBox[4]=qMin(pointList.at(0).z,pointList.at(1).z);
-    surroundBox[5]=qMax(pointList.at(0).z,pointList.at(1).z);
+    faceList.push_back(Point3f(index[0],index[1],index[2]));
+    surroundBox[0]=x;
+    surroundBox[1]=x;
+    surroundBox[2]=y;
+    surroundBox[3]=y;
+    surroundBox[4]=z;
+    surroundBox[5]=z;
     unTriangles++;
     getline(ss, useless);//空行
     getline(ss, useless);//end loop
@@ -104,8 +119,8 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
         ss >> useless;//facet
         if (useless != "facet")
             break;
-        ss >> useless >> x >> y >>z;
-        pointList.push_back(Point3f(x, y, z));
+        ss >> useless >> x >> y >>z;//法向量
+        normalList.push_back(Point3f(x, y, z));
         getline(ss, useless);
         getline(ss, useless);//outer loop
         for (int i = 0; i < 3; i++)
@@ -117,8 +132,15 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
             surroundBox[3]=qMax(surroundBox[3],y);
             surroundBox[4]=qMin(surroundBox[4],z);
             surroundBox[5]=qMax(surroundBox[5],z);
-            pointList.push_back(Point3f(x, y, z));
+            sprintf_s(idx, "%.2f", qAbs(x));sprintf_s(idy, "%.2f",qAbs(y));sprintf_s(idz, "%.2f", qAbs(z));
+            id=(string)idx+(string)idy+(string)idz;
+            id=id.replace(id.find("."),1,"");
+            id=id.replace(id.find("."),1,"");
+            id=id.replace(id.find("."),1,"");
+            stream.clear();stream<<id;stream>>ID;//string转long
+            index[i]=hashtable->addPoint(ID,Point3f(x,y,z));
         }
+        faceList.push_back(Point3f(index[0],index[1],index[2]));
         unTriangles++;
         getline(ss, useless);//空行
         getline(ss, useless);//end loop
@@ -130,30 +152,43 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
 bool ReadSTLFile::ReadBinary(const char *buffer)
 {
     const char* p = buffer;
-    char name[80];
+    char name[80],idx[10],idy[10],idz[10];
     float x,y,z;
+    size_t index[3];
+    long long ID;
+    string id;
+    stringstream stream;
+    hashtable = new HashTable;
     memcpy(name, p, 80);//80字节文件头
     //cout<<name<<endl;
     p += 80;
     unTriangles= cpyint(p);//4字节三角面片个数
     //提取第一个面片，得到最大最小值初始值
-    pointList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
+    normalList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
     for (int j = 0; j < 3; j++)//读取三顶点
     {
         x=cpyfloat(p);y=cpyfloat(p);z=cpyfloat(p);
-        pointList.push_back(Point3f(x, y, z));
+        sprintf_s(idx, "%.2f", qAbs(x));sprintf_s(idy, "%.2f",qAbs(y));sprintf_s(idz, "%.2f", qAbs(z));
+        id=(string)idx+(string)idy+(string)idz;
+        id=id.replace(id.find("."),1,"");
+        id=id.replace(id.find("."),1,"");
+        id=id.replace(id.find("."),1,"");
+        stream.clear();stream<<id;stream>>ID;//string转long
+        //cout<<"ID:"<<ID<<endl;
+        index[j]=hashtable->addPoint(ID,Point3f(x,y,z));
     }
-    surroundBox[0]=qMin(pointList.at(0).x,pointList.at(1).x);
-    surroundBox[1]=qMax(pointList.at(0).x,pointList.at(1).x);
-    surroundBox[2]=qMin(pointList.at(0).y,pointList.at(1).y);
-    surroundBox[3]=qMax(pointList.at(0).y,pointList.at(1).y);
-    surroundBox[4]=qMin(pointList.at(0).z,pointList.at(1).z);
-    surroundBox[5]=qMax(pointList.at(0).z,pointList.at(1).z);
+    faceList.push_back(Point3f(index[0],index[1],index[2]));
+    surroundBox[0]=x;
+    surroundBox[1]=x;
+    surroundBox[2]=y;
+    surroundBox[3]=y;
+    surroundBox[4]=z;
+    surroundBox[5]=z;
     p += 2;//跳过尾部标志
-
+    //读取其他面片
     for (int i = 1; i<unTriangles; i++)
     {
-        pointList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
+        normalList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
         for (int j = 0; j < 3; j++)//读取三顶点
         {
             x=cpyfloat(p);y=cpyfloat(p);z=cpyfloat(p);
@@ -163,8 +198,16 @@ bool ReadSTLFile::ReadBinary(const char *buffer)
             surroundBox[3]=qMax(surroundBox[3],y);
             surroundBox[4]=qMin(surroundBox[4],z);
             surroundBox[5]=qMax(surroundBox[5],z);
-            pointList.push_back(Point3f(x, y, z));
+            sprintf_s(idx, "%.2f", qAbs(x));sprintf_s(idy, "%.2f",qAbs(y));sprintf_s(idz, "%.2f", qAbs(z));
+            id=(string)idx+(string)idy+(string)idz;
+            id=id.replace(id.find("."),1,"");
+            id=id.replace(id.find("."),1,"");
+            id=id.replace(id.find("."),1,"");
+            stream.clear();stream<<id;stream>>ID;//string转long
+            //cout<<"ID:"<<ID<<endl;
+            index[j]=hashtable->addPoint(ID,Point3f(x,y,z));
         }
+        faceList.push_back(Point3f(index[0],index[1],index[2]));
         p += 2;//跳过尾部标志
     }
     return true;
@@ -176,10 +219,6 @@ int ReadSTLFile::NumTri()
     cout<<unTriangles<<endl;
 }
 
-vector<Point3f>& ReadSTLFile::PointList()
-{
-    return pointList;
-}
 
 int ReadSTLFile::cpyint(const char*& p)
 {
