@@ -5,7 +5,7 @@
 #include <string>
 #include <sstream>
 #include <QDebug>
-
+#include <QtCore/qmath.h>
 #include"Point3f.h"
 #include"readstlfile.h"
 
@@ -56,14 +56,14 @@ bool ReadSTLFile::ReadStlFile(const char *cfilename)
     {
         std::cout<<"ASCII文件"<<endl;
         vector<Point3f>().swap(normalList);//清空vector
-        vector<Point3f>().swap(faceList);
+        vector<vector<size_t>>().swap(faceList);
         ReadASCII(buffer);
     }
     else
     {
         std::cout<<"Binary文件"<<endl;
         vector<Point3f>().swap(normalList);
-        vector<Point3f>().swap(faceList);
+        vector<vector<size_t>>().swap(faceList);
         ReadBinary(buffer);
     }
     ios::sync_with_stdio(true);
@@ -77,8 +77,9 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
     unTriangles = 0;
     float x, y, z;
     char idx[10],idy[10],idz[10];
-    size_t index[3];
+    size_t index;
     long long ID;
+    vector<size_t> point(3);
     hashtable = new HashTable;
     string name, useless,id;
     stringstream ss(buffer),stream;
@@ -100,9 +101,10 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
         id=id.replace(id.find("."),1,"");
         stream.clear();
         stream<<id;stream>>ID;
-        index[i]=hashtable->addPoint(ID,Point3f(x,y,z));
+        index=hashtable->addPoint(ID,Point3f(x,y,z));
+        point[i]=index;
     }
-    faceList.push_back(Point3f(index[0],index[1],index[2]));
+    faceList.push_back(point);
     surroundBox[0]=x;
     surroundBox[1]=x;
     surroundBox[2]=y;
@@ -138,9 +140,10 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
             id=id.replace(id.find("."),1,"");
             id=id.replace(id.find("."),1,"");
             stream.clear();stream<<id;stream>>ID;//string转long
-            index[i]=hashtable->addPoint(ID,Point3f(x,y,z));
+            index=hashtable->addPoint(ID,Point3f(x,y,z));
+            point[i]=index;
         }
-        faceList.push_back(Point3f(index[0],index[1],index[2]));
+        faceList.push_back(point);
         unTriangles++;
         getline(ss, useless);//空行
         getline(ss, useless);//end loop
@@ -154,9 +157,10 @@ bool ReadSTLFile::ReadBinary(const char *buffer)
     const char* p = buffer;
     char name[80],idx[10],idy[10],idz[10];
     float x,y,z;
-    size_t index[3];
+    size_t index;
     long long ID;
     string id;
+    vector<size_t> point(3);
     stringstream stream;
     hashtable = new HashTable;
     memcpy(name, p, 80);//80字节文件头
@@ -175,9 +179,10 @@ bool ReadSTLFile::ReadBinary(const char *buffer)
         id=id.replace(id.find("."),1,"");
         stream.clear();stream<<id;stream>>ID;//string转long
         //cout<<"ID:"<<ID<<endl;
-        index[j]=hashtable->addPoint(ID,Point3f(x,y,z));
+        index=hashtable->addPoint(ID,Point3f(x,y,z));
+        point[j]=index;
     }
-    faceList.push_back(Point3f(index[0],index[1],index[2]));
+    faceList.push_back(point);
     surroundBox[0]=x;
     surroundBox[1]=x;
     surroundBox[2]=y;
@@ -186,7 +191,7 @@ bool ReadSTLFile::ReadBinary(const char *buffer)
     surroundBox[5]=z;
     p += 2;//跳过尾部标志
     //读取其他面片
-    for (int i = 1; i<unTriangles; i++)
+    for (unsigned int i = 1; i < unTriangles; i++)
     {
         normalList.push_back(Point3f(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
         for (int j = 0; j < 3; j++)//读取三顶点
@@ -205,9 +210,10 @@ bool ReadSTLFile::ReadBinary(const char *buffer)
             id=id.replace(id.find("."),1,"");
             stream.clear();stream<<id;stream>>ID;//string转long
             //cout<<"ID:"<<ID<<endl;
-            index[j]=hashtable->addPoint(ID,Point3f(x,y,z));
+            index=hashtable->addPoint(ID,Point3f(x,y,z));
+            point[j]=index;
         }
-        faceList.push_back(Point3f(index[0],index[1],index[2]));
+        faceList.push_back(point);
         p += 2;//跳过尾部标志
     }
     return true;

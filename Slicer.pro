@@ -55,3 +55,4 @@ LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-1_59
 LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-1_59
 LIBS += -L$$PWD/bin/ -llibmpfr-4
 LIBS += -L$$PWD/bin/ -llibgmp-10
+

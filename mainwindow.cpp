@@ -13,6 +13,9 @@
 #include <QTableView>
 #include <QDebug>
 #include <Qtime>
+#include "windows.h"
+#include"WinBase.h"
+#include "Psapi.h"
 #include "mainwindow.h"
 
 using namespace std;
@@ -53,12 +56,21 @@ MainWindow::MainWindow(QWidget *parent)
 
     mainlayout->addWidget(splitter);
     mainlayout->addLayout(rightlayout);
+    setStatusTip(tr("ready"));
 
 }
 
 MainWindow::~MainWindow()
 {
 
+}
+
+void MainWindow::showMemoryInfo()
+{
+    HANDLE handle=GetCurrentProcess();
+    PROCESS_MEMORY_COUNTERS pmc;
+    GetProcessMemoryInfo(handle,&pmc,sizeof(pmc));
+    qDebug()<<"using memory:"<<pmc.WorkingSetSize/1000000<<"MB"<<endl;
 }
 
 void MainWindow::openFile()
@@ -87,10 +99,12 @@ void MainWindow::openFile()
         opengl->vertices=readstl.hashtable->vertices;
         opengl->faceList=readstl.faceList;
         qDebug()<<"time of OpenGl:"<<time.elapsed()/1000.0/1000.0<<"s";
-
-        //shapediameterfunction->ConstructMesh(readstl.pointList,readstl.NumTri());
-        //shapediameterfunction->show();
-
+        showMemoryInfo();
+        vector<vector<double>> charValue=shapediameterfunction->calculateSDF(readstl.hashtable->vertices,readstl.faceList);
+        for(int i=0;i<charValue.size();i++)
+        {
+            qDebug()<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
+        }
         //readstl.hashtable->show();
         qDebug()<<"number of vertices:"<<readstl.hashtable->size;
         qDebug()<<"number of faces:"<<readstl.faceList.size()<<endl;

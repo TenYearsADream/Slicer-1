@@ -19,6 +19,7 @@ public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
     int nFaceCount=0;
+    void showMemoryInfo();
     ReadSTLFile readstl;
 private:
     void openFile();

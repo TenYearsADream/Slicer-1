@@ -11,7 +11,7 @@ public:
     bool ReadStlFile(const char *cfilename);
     int NumTri();
     vector<Point3f> normalList;
-    vector<Point3f> faceList;
+    vector<vector<size_t>> faceList;
     float  surroundBox[6];
     HashTable *hashtable;
 private:

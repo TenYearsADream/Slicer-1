@@ -2,17 +2,14 @@
 #define SHAPEDIAMETERFUNCTION
 #include <vector>
 #include "point3f.h"
-
+#include "hashtable.h"
 using namespace std;
 
 class ShapeDiameterFunction{
 public:
     ShapeDiameterFunction();
     ~ShapeDiameterFunction();
-    void ConstructMesh(vector<Point3f> pointList, int nFaceCount);
-    void show();
-
-private:
+    vector<vector<double>> calculateSDF(vector <tableNode *> vertices, vector<vector<size_t>> faceList);
 };
 
 #endif // SHAPEDIAMETERFUNCTION

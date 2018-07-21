@@ -42,21 +42,17 @@ void MyTableWidget::slotItemClicked(QTableWidgetItem *item)
     //qDebug()<<"You clicked!"<<row<<endl;
 }
 
-void MyTableWidget::setData(vector <tableNode *> vertices, vector<Point3f> faceList)
+void MyTableWidget::setData(vector <tableNode *> vertices, vector<vector<size_t>> faceList)
 {
     for(int i=0; i<faceList.size(); i++)
     {
-        tableNode *v1 = vertices[faceList.at(i).x];
-        tableNode *v2 = vertices[faceList.at(i).y];
-        tableNode *v3 = vertices[faceList.at(i).z];
-        this->setItem(i,0, new QTableWidgetItem(QString::number(v1->point.x,'f',2)));
-        this->setItem(i,1, new QTableWidgetItem(QString::number(v1->point.y,'f',2)));
-        this->setItem(i,2, new QTableWidgetItem(QString::number(v1->point.z,'f',2)));
-        this->setItem(i,3, new QTableWidgetItem(QString::number(v2->point.x,'f',2)));
-        this->setItem(i,4, new QTableWidgetItem(QString::number(v2->point.y,'f',2)));
-        this->setItem(i,5, new QTableWidgetItem(QString::number(v2->point.z,'f',2)));
-        this->setItem(i,6, new QTableWidgetItem(QString::number(v3->point.x,'f',2)));
-        this->setItem(i,7, new QTableWidgetItem(QString::number(v3->point.y,'f',2)));
-        this->setItem(i,8, new QTableWidgetItem(QString::number(v3->point.z,'f',2)));
+        for (int j=0;j<faceList[i].size();j++)
+        {
+            tableNode *v = vertices[faceList[i][j]];
+            this->setItem(i,3*j+0, new QTableWidgetItem(QString::number(v->point.x,'f',2)));
+            this->setItem(i,3*j+1, new QTableWidgetItem(QString::number(v->point.y,'f',2)));
+            this->setItem(i,3*j+2, new QTableWidgetItem(QString::number(v->point.z,'f',2)));
+        }
+
     }
 }

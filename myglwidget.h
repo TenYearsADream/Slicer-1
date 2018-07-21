@@ -11,8 +11,7 @@ class MyGLWidget : public QGLWidget
 public:
     explicit MyGLWidget(QWidget *parent = 0);
     void resizeGL(int w, int h);
-    //vector<Point3f> pointList;
-    vector<Point3f> faceList;
+    vector<vector<size_t>> faceList;
     vector <tableNode *> vertices;
     int nFaceCount;
     bool ColorFlag[1000000];

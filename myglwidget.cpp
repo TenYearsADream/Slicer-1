@@ -6,6 +6,8 @@
 #include <gl/GLU.h>
 #include <QPushButton>\
 
+using namespace std;
+
 MyGLWidget::MyGLWidget(QWidget *parent) :
     QGLWidget(parent)
 {
@@ -63,12 +65,13 @@ void MyGLWidget::paintGL()
     glBegin( GL_TRIANGLES );
         for (int i=0;i<faceList.size();i++)
         {
-           tableNode *v1 = vertices[faceList.at(i).x];
-           tableNode *v2 = vertices[faceList.at(i).y];
-           tableNode *v3 = vertices[faceList.at(i).z];
+           tableNode *v1 = vertices[faceList[i][0]];
+           tableNode *v2 = vertices[faceList[i][1]];
+           tableNode *v3 = vertices[faceList[i][2]];
            if (ColorFlag[i])
            {
                glColor3f( 0.7, 0.7, 0.7 );
+
                glVertex3f(v1->point.x,v1->point.y,v1->point.z);
                glVertex3f(v2->point.x,v2->point.y,v2->point.z);
                glVertex3f(v3->point.x,v3->point.y,v3->point.z);

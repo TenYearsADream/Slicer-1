@@ -10,7 +10,7 @@ class MyTableWidget : public QTableWidget
     Q_OBJECT
 public:
     explicit MyTableWidget(QWidget *parent = 0);
-    void setData(vector <tableNode *> vertices, vector<Point3f> faceList);
+    void setData(vector <tableNode *> vertices, vector<vector<size_t>> faceList);
 private slots:
     void slotItemClicked(QTableWidgetItem*);
 signals:
