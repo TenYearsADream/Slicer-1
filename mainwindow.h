@@ -5,6 +5,7 @@
 #include <QTextEdit>
 #include <QPushButton>
 #include <QTableWidget>
+
 #include "myglwidget.h"
 #include "mytablewidget.h"
 #include "readstlfile.h"
@@ -21,6 +22,8 @@ public:
     int nFaceCount=0;
     void showMemoryInfo();
     ReadSTLFile readstl;
+private slots:
+    void modelSegment();
 private:
     void openFile();
     QAction *openAction;

@@ -17,7 +17,7 @@
 #include"WinBase.h"
 #include "Psapi.h"
 #include "mainwindow.h"
-
+#include "hierarchicalclustering.h"
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent)
@@ -40,8 +40,8 @@ MainWindow::MainWindow(QWidget *parent)
     opengl= new MyGLWidget(cenWidget);
     tableWidget =new MyTableWidget((cenWidget));
     connect(tableWidget,SIGNAL(rowClicked(int)),opengl,SLOT(changeColorFlag(int)));
-    QPushButton *button = new QPushButton(tr("useless"),(cenWidget));
-
+    QPushButton *button = new QPushButton(tr("segment"),(cenWidget));
+    connect(button,SIGNAL(clicked()),this,SLOT(modelSegment()));
     QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
 
     QVBoxLayout *rightlayout = new QVBoxLayout(cenWidget);
@@ -96,21 +96,44 @@ void MainWindow::openFile()
         opengl->m_xMove=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
         opengl->m_yMove=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
         opengl->zoom=-3.0*qMax(qAbs(readstl.surroundBox[4]),qAbs(readstl.surroundBox[5]))-50.0;
+        opengl->colorFlag.resize(readstl.faceList.size());
+        opengl->colorFlag.clear();
         opengl->vertices=readstl.hashtable->vertices;
         opengl->faceList=readstl.faceList;
         qDebug()<<"time of OpenGl:"<<time.elapsed()/1000.0/1000.0<<"s";
         showMemoryInfo();
-        vector<vector<double>> charValue=shapediameterfunction->calculateSDF(readstl.hashtable->vertices,readstl.faceList);
-        for(int i=0;i<charValue.size();i++)
-        {
-            qDebug()<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
-        }
-        //readstl.hashtable->show();
-        qDebug()<<"number of vertices:"<<readstl.hashtable->size;
-        qDebug()<<"number of faces:"<<readstl.faceList.size()<<endl;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
                              tr("You did not select any file."));
     }
+}
+
+void MainWindow::modelSegment()
+{
+    HierarchicalClustering hierarchicalclustering;
+    if(!readstl.faceList.empty())
+    {
+        vector<vector<double>> charValue=shapediameterfunction->calculateSDF(readstl.hashtable->vertices,readstl.faceList);
+//        for(int i=0;i<charValue.size();i++)
+//        {
+//            qDebug()<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
+//        }
+//        readstl.hashtable->show();
+        qDebug()<<"number of vertices:"<<readstl.hashtable->size;
+        qDebug()<<"number of faces:"<<readstl.faceList.size()<<endl;
+        vector<vector<int>> clusterTable=hierarchicalclustering.Cluster(charValue,0.8);
+        for(int i=0;i<clusterTable.size();i++)
+        {
+            for(int j=0;j<clusterTable[i].size();j++)
+            {
+                opengl->colorFlag[clusterTable[i][j]]=i;
+            }
+        }
+
+    } else {
+        QMessageBox::warning(this, tr("error"),
+                             tr("You did not import any model."));
+    }
+
 }

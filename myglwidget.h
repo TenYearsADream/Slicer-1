@@ -13,17 +13,15 @@ public:
     void resizeGL(int w, int h);
     vector<vector<size_t>> faceList;
     vector <tableNode *> vertices;
+    vector <int> colorFlag;
     int nFaceCount;
-    bool ColorFlag[1000000];
     GLfloat m_xMove;
     GLfloat m_yMove;
     GLfloat zoom;
-public slots:
-    void changeColorFlag(int row);
 private:
     HDC hdc;
     QTimer *timer;
-
+    GLfloat colorMap[8][3];
 
 protected:
     void initializeGL();

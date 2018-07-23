@@ -43,8 +43,8 @@ vector<vector<double>> ShapeDiameterFunction::calculateSDF(vector <tableNode *> 
         v2=mesh.add_vertex(Point(vertex3->point.x,vertex3->point.y,vertex3->point.z));
         mesh.add_face(v0,v1,v2);
     }
-    cout<<"number of vertices:"<<mesh.vertices().size()<<endl;
-    cout<<"number of faces:"<<mesh.faces().size()<<endl;
+//    cout<<"number of vertices:"<<mesh.vertices().size()<<endl;
+//    cout<<"number of faces:"<<mesh.faces().size()<<endl;
 
 
     Facet_double_map sdf_property_map = mesh.add_property_map<face_descriptor,double>("f:sdf").first;

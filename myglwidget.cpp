@@ -4,8 +4,7 @@
 #include <QDebug>
 #include <QKeyEvent>
 #include <gl/GLU.h>
-#include <QPushButton>\
-
+#include <QPushButton>
 using namespace std;
 
 MyGLWidget::MyGLWidget(QWidget *parent) :
@@ -13,10 +12,15 @@ MyGLWidget::MyGLWidget(QWidget *parent) :
 {
     zoom=-10;
     rQuad = 0.0;
-    for (int i=0;i<sizeof(ColorFlag);i++)
-    {
-        ColorFlag[i]=true;
-    }
+    colorMap[0][0]=0.7;colorMap[0][1]=0.7;colorMap[0][2]= 0.7;
+    colorMap[1][0]=0.0;colorMap[1][1]=1.0;colorMap[1][2]= 0.0;
+    colorMap[2][0]=1.0;colorMap[2][1]=0.0;colorMap[2][2]= 0.0;
+    colorMap[3][0]=0.0;colorMap[3][1]=0.0;colorMap[3][2]= 1.0;
+    colorMap[4][0]=1.0;colorMap[4][1]=1.0;colorMap[4][2]= 0.0;
+    colorMap[5][0]=0.0;colorMap[5][1]=1.0;colorMap[5][2]= 1.0;
+    colorMap[6][0]=1.0;colorMap[6][1]=0.0;colorMap[6][2]= 0.5;
+    colorMap[7][0]=0.0;colorMap[7][1]=0.5;colorMap[7][2]= 0.5;
+
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(updateGL())); //不停刷新窗口
     timer->start(5);
@@ -68,22 +72,13 @@ void MyGLWidget::paintGL()
            tableNode *v1 = vertices[faceList[i][0]];
            tableNode *v2 = vertices[faceList[i][1]];
            tableNode *v3 = vertices[faceList[i][2]];
-           if (ColorFlag[i])
            {
-               glColor3f( 0.7, 0.7, 0.7 );
-
-               glVertex3f(v1->point.x,v1->point.y,v1->point.z);
-               glVertex3f(v2->point.x,v2->point.y,v2->point.z);
-               glVertex3f(v3->point.x,v3->point.y,v3->point.z);
-
-           }
-           else
-           {
-               glColor3f( 1.0, 0.0, 0.0 );
+               glColor3f( colorMap[colorFlag[i]][0], colorMap[colorFlag[i]][1], colorMap[colorFlag[i]][2] );
                glVertex3f(v1->point.x,v1->point.y,v1->point.z);
                glVertex3f(v2->point.x,v2->point.y,v2->point.z);
                glVertex3f(v3->point.x,v3->point.y,v3->point.z);
            }
+
         }
     glEnd();
     //rQuad -= 0.15;
@@ -110,17 +105,6 @@ void MyGLWidget::wheelEvent(QWheelEvent *e)
     if(bUpdate)
     {
         updateGL();
-    }
-}
-void MyGLWidget::changeColorFlag(int row)
-{
-    if(!ColorFlag[row])
-    {
-        ColorFlag[row]=true;
-    }
-    else
-    {
-        ColorFlag[row]=false;
     }
 }
 

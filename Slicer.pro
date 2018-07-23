@@ -19,7 +19,8 @@ SOURCES += main.cpp\
     point3f.cpp \
     readstlfile.cpp \
     shapediameterfunction.cpp \
-    hashtable.cpp
+    hashtable.cpp \
+    hierarchicalclustering.cpp
 
 HEADERS  += mainwindow.h \
     myglwidget.h \
@@ -27,7 +28,8 @@ HEADERS  += mainwindow.h \
     point3f.h \
     readstlfile.h \
     shapediameterfunction.h \
-    hashtable.h
+    hashtable.h \
+    hierarchicalclustering.h
 
 DISTFILES += \
     resource/open-file.png
@@ -44,6 +46,7 @@ INCLUDEPATH += E:/ProgramFiles/boost_1_59_0 \
                E:/ProgramFiles/CGAL/include \
                E:/ProgramFiles/CGAL/auxiliary/gmp/include \
                E:/ProgramFiles/CGAL/build/include \
+               E:/Program Files/VS2013/VC/include \
 
 INCLUDEPATH += $$PWD/bin
 DEPENDPATH += $$PWD/bin
@@ -55,4 +58,5 @@ LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-1_59
 LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-1_59
 LIBS += -L$$PWD/bin/ -llibmpfr-4
 LIBS += -L$$PWD/bin/ -llibgmp-10
+LIBS += -L$$PWD/bin/ -lglaux
 
