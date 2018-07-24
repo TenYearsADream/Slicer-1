@@ -50,13 +50,31 @@ INCLUDEPATH += E:/ProgramFiles/boost_1_59_0 \
 
 INCLUDEPATH += $$PWD/bin
 DEPENDPATH += $$PWD/bin
-LIBS += -L$$PWD/bin/ -lCGAL-vc120-mt-4.11
-LIBS += -L$$PWD/bin/ -lCGAL_Core-vc120-mt-4.11
-LIBS += -L$$PWD/bin/ -lCGAL_ImageIO-vc120-mt-4.11
-LIBS += -L$$PWD/bin/ -lCGAL_Qt5-vc120-mt-4.11
-LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-1_59
-LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-1_59
 LIBS += -L$$PWD/bin/ -llibmpfr-4
 LIBS += -L$$PWD/bin/ -llibgmp-10
 LIBS += -L$$PWD/bin/ -lglaux
 
+INCLUDEPATH += $$PWD/bin
+DEPENDPATH += $$PWD/bin
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_Core-vc120-mt-4.11
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_Core-vc120-mt-gd-4.11
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_ImageIO-vc120-mt-4.11
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_ImageIO-vc120-mt-gd-4.11
+else:unix:!macx: LIBS += -L$$PWD/bin/ -lCGAL_ImageIO-vc120-mt-gd-4
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_Qt5-vc120-mt-4.11
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_Qt5-vc120-mt-gd-4.11
+
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lCGAL-vc120-mt-4.11
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lCGAL-vc120-mt-gd-4.11
+
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-1_59
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-gd-1_59
+
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-1_59
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-gd-1_59

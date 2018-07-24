@@ -13,6 +13,7 @@
 #include <QTableView>
 #include <QDebug>
 #include <Qtime>
+#include <iostream>
 #include "windows.h"
 #include"WinBase.h"
 #include "Psapi.h"
@@ -39,8 +40,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     opengl= new MyGLWidget(cenWidget);
     tableWidget =new MyTableWidget((cenWidget));
-    connect(tableWidget,SIGNAL(rowClicked(int)),opengl,SLOT(changeColorFlag(int)));
-    QPushButton *button = new QPushButton(tr("segment"),(cenWidget));
+    QPushButton *button = new QPushButton(tr("segment"),(cenWidget));    
+    pSpinBox = new QDoubleSpinBox(cenWidget);
+
+    pSpinBox->setRange(0.1, 20);  // 范围
+    pSpinBox->setDecimals(2);  // 精度
+    pSpinBox->setSingleStep(0.01); // 步长
+
     connect(button,SIGNAL(clicked()),this,SLOT(modelSegment()));
     QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
 
@@ -49,6 +55,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     rightlayout->addWidget(tableWidget);
     rightlayout->addWidget(button);
+    rightlayout->addWidget(pSpinBox);
     splitter->addWidget(opengl);
     splitter->setMinimumWidth(400);
     splitter->setMinimumHeight(400);
@@ -102,6 +109,9 @@ void MainWindow::openFile()
         opengl->faceList=readstl.faceList;
         qDebug()<<"time of OpenGl:"<<time.elapsed()/1000.0/1000.0<<"s";
         showMemoryInfo();
+        qDebug()<<"number of vertices:"<<readstl.hashtable->size;
+        qDebug()<<"number of faces:"<<readstl.faceList.size()<<endl;
+        cout<<"number of normals:"<<readstl.normalList.size()<<endl;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
@@ -112,17 +122,16 @@ void MainWindow::openFile()
 void MainWindow::modelSegment()
 {
     HierarchicalClustering hierarchicalclustering;
+    double esp=pSpinBox->value();
     if(!readstl.faceList.empty())
     {
         vector<vector<double>> charValue=shapediameterfunction->calculateSDF(readstl.hashtable->vertices,readstl.faceList);
 //        for(int i=0;i<charValue.size();i++)
 //        {
-//            qDebug()<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
+//            cout<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
 //        }
-//        readstl.hashtable->show();
-        qDebug()<<"number of vertices:"<<readstl.hashtable->size;
-        qDebug()<<"number of faces:"<<readstl.faceList.size()<<endl;
-        vector<vector<int>> clusterTable=hierarchicalclustering.Cluster(charValue,0.8);
+
+        vector<vector<int>> clusterTable=hierarchicalclustering.Cluster(charValue,esp);
         for(int i=0;i<clusterTable.size();i++)
         {
             for(int j=0;j<clusterTable[i].size();j++)

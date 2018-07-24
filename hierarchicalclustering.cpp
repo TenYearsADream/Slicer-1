@@ -2,6 +2,7 @@
 #include <qmath.h>
 #include <limits>
 #include <iostream>
+#include <numeric>
 using namespace std;
 HierarchicalClustering::HierarchicalClustering(){
 
@@ -11,7 +12,7 @@ HierarchicalClustering::~HierarchicalClustering()
 
 }
 
-vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > dataset, double eps)
+vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > dataset, double esp)
 {
     vector<vector<int>> clusterTable(dataset.size());
     for(int i=0;i<dataset.size();i++)
@@ -26,7 +27,9 @@ vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > data
         vector<float> temp;
         for(int j=0;j<dataset.size();j++){
             if(j>i)
+            {
                 temp.push_back(squareDistance(dataset[i][0],dataset[i][1],dataset[j][0],dataset[j][1]));
+            }
             else if(j<i)
                 temp.push_back(dTable[j][i]);
             else
@@ -34,6 +37,21 @@ vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > data
         }
         dTable.push_back(temp);
     }
+    double sum=0;
+    for (int i=0;i<dTable.size();i++)
+    {
+       sum +=accumulate(dTable[i].begin(),dTable[i].end(), 0.0);
+    }
+    double mean =  sum / (dTable.size()*dTable[0].size()); //均值
+    cout<<mean<<endl;
+//    for(int i=0;i<dTable.size();i++)
+//    {
+//        for(int j=0;j<dTable[i].size();j++)
+//        {
+//            cout<<dTable[i][j]<<" ";
+//        }
+//        cout<<endl;
+//    }
     float maxDt;
     do{
         //Merge two closest clusters
@@ -80,11 +98,10 @@ vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > data
         }
         if(clusterTable.size()<=1)
         {
-            cout<<"one cluster"<<endl;
             break;
         }
         //cout<<"maxDt:"<<maxDt<<" "<<dTable.size()<<endl;
-    }while( maxDt>eps);
+    }while( maxDt>esp);
 //    for(int i=0;i<clusterTable.size();i++)
 //    {
 //        for(int j=0;j<clusterTable[i].size();j++)

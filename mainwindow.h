@@ -5,7 +5,7 @@
 #include <QTextEdit>
 #include <QPushButton>
 #include <QTableWidget>
-
+#include <QDoubleSpinBox>
 #include "myglwidget.h"
 #include "mytablewidget.h"
 #include "readstlfile.h"
@@ -32,6 +32,7 @@ private:
     ShapeDiameterFunction *shapediameterfunction;
     bool ReadASCII(uchar *buffer);
     bool ReadBinary(uchar *buffer);
+    QDoubleSpinBox *pSpinBox;
 };
 
 #endif // MAINWINDOW_H

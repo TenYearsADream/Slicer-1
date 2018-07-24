@@ -7,7 +7,6 @@
 #include <CGAL/boost/graph/Face_filtered_graph.h>
 #include <CGAL/Polygon_mesh_processing/measure.h>
 #include <CGAL/boost/graph/copy_face_graph.h>
-#include <CGAL/Polyhedron_3.h>
 #include <CGAL/mesh_segmentation.h>
 
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
@@ -31,35 +30,90 @@ ShapeDiameterFunction::~ShapeDiameterFunction(){
 
 vector<vector<double>> ShapeDiameterFunction::calculateSDF(vector <tableNode *> vertices, vector<vector<size_t>> faceList)
 {
-    vertex_descriptor v0,v1,v2;
-    mesh.clear();
-    for (int i=0;i<faceList.size();i++)
-    {
-        tableNode *vertex1 = vertices[faceList[i][0]];
-        tableNode *vertex2 = vertices[faceList[i][1]];
-        tableNode *vertex3 = vertices[faceList[i][2]];
-        v0=mesh.add_vertex(Point(vertex1->point.x,vertex1->point.y,vertex1->point.z));
-        v1=mesh.add_vertex(Point(vertex2->point.x,vertex2->point.y,vertex2->point.z));
-        v2=mesh.add_vertex(Point(vertex3->point.x,vertex3->point.y,vertex3->point.z));
-        mesh.add_face(v0,v1,v2);
-    }
-//    cout<<"number of vertices:"<<mesh.vertices().size()<<endl;
-//    cout<<"number of faces:"<<mesh.faces().size()<<endl;
-
+    constructMesh(vertices,faceList);
 
     Facet_double_map sdf_property_map = mesh.add_property_map<face_descriptor,double>("f:sdf").first;
     pair<double, double> min_max_sdf=CGAL::sdf_values(mesh, sdf_property_map);
     //cout<< "minimum SDF: " << min_max_sdf.first<< " maximum SDF: " << min_max_sdf.second <<endl;
     // print SDF values
-    vector<vector<double>> charValue;
+    vector<vector<double>> chardata;
     vector<double> value(2);
+    //charvalue.resize(faceList.size());
     BOOST_FOREACH( face_descriptor fd, mesh.faces())
     {
+//        cout << "vertices around face " << fd <<":";
+//        CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
+//        for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(fd), mesh);
+//            vbegin != vend;
+//            ++vbegin){
+//          cout << *vbegin <<" ";
+//        }
+//        cout<<endl;
         double sdfvalue=sdf_property_map[fd];
         double facearea=CGAL::Polygon_mesh_processing::face_area(fd,mesh);
         //cout << sdfvalue<<" "<<facearea <<endl;
         value[0]=sdfvalue;value[1]=facearea;
-        charValue.push_back(value);
+        //charvalue.push_back(sdfValue(sdfvalue,facearea));
+        chardata.push_back(value);
     }
-    return charValue;
+    //cout<<charvalue.size()<<endl;
+    return normalize(chardata);
+}
+
+void ShapeDiameterFunction::constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList)
+{
+    mesh.clear();
+    vector<vector<int>> index;
+    int j=0;
+    for (int i=0;i<vertices.size();i++)
+    {
+        tableNode *vertex = vertices[i];
+        if(vertex!=NULL)
+        {
+            vector<int> tmp(2);
+            tmp[0]=j;tmp[1]=i;
+            index.push_back(tmp);
+            vertex_descriptor v0=mesh.add_vertex(Point(vertex->point.x,vertex->point.y,vertex->point.z));
+            j++;
+        }
+    }
+    //cout<<"number of vertices:"<<mesh.vertices().size()<<endl;
+    for(int i=0;i<faceList.size();i++)
+    {
+        vertex_descriptor vx(getIndex(index,faceList[i][0]));
+        vertex_descriptor vy(getIndex(index,faceList[i][1]));
+        vertex_descriptor vz(getIndex(index,faceList[i][2]));
+        //cout<<vx<<" "<<vy<<" "<<vz<<endl;
+        mesh.add_face(vx,vy,vz);
+    }
+    //cout<<"number of faces:"<<mesh.faces().size()<<endl;
+}
+
+int ShapeDiameterFunction::getIndex(vector<vector<int> > index, int ID)
+{
+    for(int i=0;i<index.size();i++)
+    {
+        if(index[i][1]==ID)
+        {
+            return index[i][0];
+        }
+    }
+    return 0;
+}
+
+vector<vector<double>> ShapeDiameterFunction::normalize(vector<vector<double> > dataset)
+{
+    vector<double> featuredata;
+    for(int i=0;i<dataset.size();i++)
+    {
+        featuredata.push_back(dataset[i][1]);
+    }
+    double maxValue=*max_element(featuredata.begin(),featuredata.end());
+    double minValue=*min_element(featuredata.begin(),featuredata.end());
+    for(int i=0;i<featuredata.size();i++)
+    {
+        featuredata[i]=(featuredata[i]-minValue)/(maxValue-minValue+1e-8);
+        dataset[i][1]=featuredata[i];
+    }
+    return dataset;
 }
