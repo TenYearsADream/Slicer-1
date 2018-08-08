@@ -15,8 +15,10 @@ HierarchicalClustering::~HierarchicalClustering()
 vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > dataset, double esp)
 {
     vector<vector<int>> clusterTable(dataset.size());
+    vector<double> area;
     for(int i=0;i<dataset.size();i++)
     {
+        area.push_back(dataset[i][1]);
         vector<int> tmp;
         tmp.push_back(i);
         clusterTable[i]=(tmp);//聚类表保存索引
@@ -110,6 +112,35 @@ vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > data
 //        }
 //        cout<<endl;
 //    }
+
+    float totalArea=accumulate(area.begin(),area.end(),0.0f);
+    for(int i=0;i<clusterTable.size();i++)
+    {
+        float area=0.0f,maxsdf=0.0f,minsdf=1.0f;
+        for(int j=0;j<clusterTable[i].size();j++)
+        {
+            area += dataset[clusterTable[i][j]][1];
+            if(dataset[clusterTable[i][j]][0]>maxsdf)
+            {
+                maxsdf=dataset[clusterTable[i][j]][0];
+            }
+            if(dataset[clusterTable[i][j]][0]<minsdf)
+            {
+                minsdf=dataset[clusterTable[i][j]][0];
+            }
+        }
+        cout<<area<<" "<<maxsdf<<" "<<minsdf<<endl;
+        if(i!=0)
+        if((maxsdf/(minsdf+0.001))<10 || area/totalArea>0.1)
+        {
+            for(int j=0;j<clusterTable[i].size();j++)
+            {
+                clusterTable[0].push_back(clusterTable[i][j]);
+            }
+            clusterTable.erase(clusterTable.begin()+i);
+            i=i-1;
+        }
+    }
     cout<<"number of cluster:"<<clusterTable.size()<<endl;
     return clusterTable;
 }

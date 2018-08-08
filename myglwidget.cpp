@@ -11,19 +11,22 @@
 #include <QOpenGLShaderProgram>
 #include <glm/gtc/type_ptr.hpp>
 using namespace std;
-
+static GLdouble colorMap[][3]={
+    {0.7,0.7,0.7},
+    {1.0,0.0,0.0},
+    {0.0,1.0,0.0},
+    {0.0,0.0,1.0},
+    {1.0,1.0,0.0},
+    {1.0,0.0,1.0},
+    {0.667,0.667,1.0},
+    {1.0,0.5,0.0},
+    {0.5,0.0,0.0},
+    {1.0,0.8,0.8},
+    {0.0,0.0,0.5},
+};
 MyGLWidget::MyGLWidget(QWidget *parent) :QOpenGLWidget(parent)
   ,xtrans(0.0),ytrans(0.0),ztrans(0.0)
 {
-    colorMap[0][0]=0.7;colorMap[0][1]=0.7;colorMap[0][2]= 0.7;
-    colorMap[1][0]=0.0;colorMap[1][1]=1.0;colorMap[1][2]= 0.0;
-    colorMap[2][0]=1.0;colorMap[2][1]=0.0;colorMap[2][2]= 0.0;
-    colorMap[3][0]=0.0;colorMap[3][1]=0.0;colorMap[3][2]= 1.0;
-    colorMap[4][0]=1.0;colorMap[4][1]=1.0;colorMap[4][2]= 0.0;
-    colorMap[5][0]=0.0;colorMap[5][1]=1.0;colorMap[5][2]= 1.0;
-    colorMap[6][0]=1.0;colorMap[6][1]=0.0;colorMap[6][2]= 0.5;
-    colorMap[7][0]=0.0;colorMap[7][1]=0.5;colorMap[7][2]= 0.5;
-
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(update())); //不停刷新窗口
     timer->start(2);
@@ -61,9 +64,15 @@ void MyGLWidget::initializeGL()
     view.lookAt(QVector3D(0.0f, 0.0f,300.0f), QVector3D(0.0f,0.0f,0.0f), QVector3D(0.0f,1.0f,0.0f));
 
     // uniform light/material property
-    program->setUniformValue("Kd", QVector3D(0.9f, 0.5f, 0.3f));
-    program->setUniformValue("Ld", QVector3D(1.0f, 1.0f, 1.0f));
-    program->setUniformValue("LightPosition", view * QVector4D(0.0f,0.0f,150.0f,1.0f) );
+    QVector4D worldLight = QVector4D(0.0f,150.0f,0.0f,1.0f);
+    program->setUniformValue("Material.Kd", 0.9f, 0.5f, 0.3f);
+    program->setUniformValue("Light.Ld", 1.0f, 1.0f, 1.0f);
+    program->setUniformValue("Light.Position", view * worldLight );
+    program->setUniformValue("Material.Ka", 0.9f, 0.5f, 0.3f);
+    program->setUniformValue("Light.La", 0.4f, 0.4f, 0.4f);
+    program->setUniformValue("Material.Ks", 0.8f, 0.8f, 0.8f);
+    program->setUniformValue("Light.Ls", 1.0f, 1.0f, 1.0f);
+    program->setUniformValue("Material.Shininess", 100.0f);
     program->setUniformValue("ViewportMatrix", view);
 }
 
@@ -82,63 +91,6 @@ void MyGLWidget::resizeGL(int width, int height)
 void MyGLWidget::paintGL()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // 指定顶点属性数据 顶点位置 颜色 纹理
-    GLfloat position[] = {
-        0.0f, 0.0f, 0.0f,
-        100.0f, 0.0f, 0.0f,
-        100.0f, 100.0f, 0.0f,
-        0.0f, 100.0f, 0.0f,
-
-        0.0f, 0.0f, 100.0f,
-        100.0f, 0.0f,100.0f,
-        100.0f, 100.0f, 100.0f,
-        0.0f, 100.0f, 100.0f,
-    };
-    GLfloat normal[] = {
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 1.0f,
-        0.0f,1.0f,1.0f,
-        1.0f,1.0f,1.0f,
-        1.0f,0.0f,0.0f,
-        1.0f,1.0f,0.0f,
-        1.0f,0.0f,1.0f,
-    };
-    GLushort indices[]={
-        0,1,2,0,2,3,
-        0,4,7,0,3,7,
-        1,2,6,1,5,6,
-        0,1,4,1,4,5,
-        4,5,6,4,6,7,
-        3,2,7,2,6,7,
-    };
-
-    unsigned int handle[3];
-    glGenBuffers(3, handle);
-
-    glBindBuffer(GL_ARRAY_BUFFER, handle[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(position),position, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(normal), normal, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices),indices, GL_STATIC_DRAW);
-
-    // Create the VAO
-    vao.create();
-    vao.bind();
-
-    glEnableVertexAttribArray(0);  // Vertex position
-    glBindBuffer(GL_ARRAY_BUFFER, handle[0]);
-    glVertexAttribPointer( (GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, ((GLubyte *)NULL + (0)) );
-
-    glEnableVertexAttribArray(1);  // Vertex normal
-    glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
-    glVertexAttribPointer( (GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, ((GLubyte *)NULL + (0)) );
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
     // transform the model
     model.setToIdentity();
     model.translate(xtrans, -ytrans, ztrans);
@@ -148,12 +100,57 @@ void MyGLWidget::paintGL()
     program->setUniformValue("NormalMatrix", mv.normalMatrix());
     program->setUniformValue("MVP", projection * mv);
     program->bind();
-    //开始绘制
-    glDrawElements(GL_TRIANGLES,sizeof(indices)/sizeof(indices[0]), GL_UNSIGNED_SHORT, 0);
-    //glDrawArrays(GL_TRIANGLES,0,3);
 
+    unsigned int handle[3];
+    glGenBuffers(3, handle);
+
+    glEnableVertexAttribArray(0);  // Vertex position
+    glBindBuffer(GL_ARRAY_BUFFER, handle[0]);
+    glVertexAttribPointer( (GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, ((GLubyte *)NULL + (0)) );
+
+    glEnableVertexAttribArray(1);  // Vertex normal
+    glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
+    glVertexAttribPointer( (GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, ((GLubyte *)NULL + (0)) );
+
+    glBindBuffer(GL_ARRAY_BUFFER, handle[0]);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat),vertices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat),vertices.data(), GL_STATIC_DRAW);
+    if(!indices.empty())
+    {
+        if(clusterTable.empty())
+        {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER,indices.size()*sizeof(GLushort),indices.data(), GL_STATIC_DRAW);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
+            program->setUniformValue("SegmentColor",QVector3D(colorMap[0][0],colorMap[0][1],colorMap[0][2]));
+            //开始绘制
+            glDrawElements(GL_TRIANGLES,(GLsizei)indices.size(), GL_UNSIGNED_SHORT, 0);
+        }
+        else
+        {
+            vector<GLushort> index;
+            for(int i=0;i<clusterTable.size();i++)
+            {
+                vector<GLushort>().swap(index);
+                for(int j=0;j<clusterTable[i].size();j++)
+                {
+                    index.push_back(indices[3*clusterTable[i][j]+0]);
+                    index.push_back(indices[3*clusterTable[i][j]+1]);
+                    index.push_back(indices[3*clusterTable[i][j]+2]);
+                }
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER,index.size()*sizeof(GLushort),index.data(), GL_STATIC_DRAW);
+
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
+                program->setUniformValue("SegmentColor",QVector3D(colorMap[i][0],colorMap[i][1],colorMap[i][2]));
+                //开始绘制
+                glDrawElements(GL_TRIANGLES,(GLsizei)index.size(), GL_UNSIGNED_SHORT, 0);
+            }
+        }
+    }
 }
-
 void MyGLWidget::wheelEvent(QWheelEvent *event)
 {
     QPoint numDegrees = event->angleDelta() / 8;
@@ -173,8 +170,8 @@ void MyGLWidget::mouseMoveEvent(QMouseEvent *event)
     {
         QVector2D newPos = (QVector2D)event->pos();
         QVector2D diff = newPos - mousePos;
-        xtrans +=diff.x()/20;
-        ytrans +=diff.y()/20;
+        xtrans +=diff.x()/10;
+        ytrans +=diff.y()/10;
         mousePos = newPos;
         update();
     }

@@ -7,17 +7,16 @@
 #include <CGAL/boost/graph/copy_face_graph.h>
 #include <CGAL/mesh_segmentation.h>
 
-//typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-//typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
+typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
+typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
 typedef Kernel::Point_3 Point;
 typedef Mesh::Vertex_index vertex_descriptor;
 typedef boost::graph_traits<Mesh>::face_descriptor face_descriptor;
 typedef Mesh::Property_map<face_descriptor,double> Facet_double_map;
 typedef Mesh::Property_map<face_descriptor, size_t> Facet_int_map;
 typedef CGAL::Face_filtered_graph<Mesh> Filtered_graph;
-
 using namespace std;
-
+Mesh mesh;
 ShapeDiameterFunction::ShapeDiameterFunction(){
     cout<<"ShapeDiameterFunction"<<endl;
 }

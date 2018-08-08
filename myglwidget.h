@@ -25,29 +25,22 @@ class MyGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 public:
     explicit MyGLWidget(QWidget *parent = 0);
     ~MyGLWidget();
-    vector<GLushort> faceList;
+    vector<GLushort> indices;
     vector<GLfloat> vertices;
-    vector <int> colorFlag;
-    int nFaceCount;
-    GLfloat m_xMove;
-    GLfloat m_yMove;
-    GLfloat zoom;
+    vector <vector<int>> clusterTable;
+    GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis
 private:
     HDC hdc;
     QTimer *timer;
-    GLfloat colorMap[8][3];
+    //GLdouble colorMap[8][3];
     QOpenGLShaderProgram *program;
-    QOpenGLBuffer vbo;
-    QOpenGLVertexArrayObject vao;
 private:
-    GLfloat angle;
     //变换矩阵
     QMatrix4x4 mvpMatrix;
     QMatrix4x4 model;
     QMatrix4x4 view;
     QMatrix4x4 projection;
 
-    GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis
     QVector2D mousePos;
     QQuaternion rotation;
 protected:

@@ -100,11 +100,12 @@ void MainWindow::openFile()
         tableWidget->show();
         qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
         time.start();
-//        opengl->m_xMove=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
-//        opengl->m_yMove=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
-//        opengl->zoom=1.0/(qMax(qAbs(readstl.surroundBox[4]),qAbs(readstl.surroundBox[5])));
-        opengl->colorFlag.resize(readstl.faceList.size());
-        opengl->colorFlag.clear();
+        opengl->xtrans=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
+        opengl->ytrans=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
+        opengl->ztrans=1.0/(qMax(qAbs(readstl.surroundBox[4]),qAbs(readstl.surroundBox[5])));
+        opengl->clusterTable.clear();
+        opengl->vertices.clear();
+        opengl->indices.clear();
         vector<vector<int>> index;
         int j=0;
         for (int i=0;i<readstl.hashtable->vertices.size();i++)
@@ -129,7 +130,7 @@ void MainWindow::openFile()
                 {
                     if(index[k][1]==readstl.faceList[i][j])
                     {
-                        opengl->faceList.push_back(index[k][0]);
+                        opengl->indices.push_back(index[k][0]);
                     }
                 }
             }
@@ -157,15 +158,7 @@ void MainWindow::modelSegment()
 //        {
 //            cout<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
 //        }
-
-        vector<vector<int>> clusterTable=hierarchicalclustering.Cluster(charValue,esp);
-        for(int i=0;i<clusterTable.size();i++)
-        {
-            for(int j=0;j<clusterTable[i].size();j++)
-            {
-                opengl->colorFlag[clusterTable[i][j]]=i;
-            }
-        }
+        opengl->clusterTable=hierarchicalclustering.Cluster(charValue,esp);
 
     } else {
         QMessageBox::warning(this, tr("error"),
