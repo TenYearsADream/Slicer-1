@@ -100,18 +100,45 @@ void MainWindow::openFile()
         tableWidget->show();
         qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
         time.start();
-        opengl->m_xMove=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
-        opengl->m_yMove=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
-        opengl->zoom=-3.0*qMax(qAbs(readstl.surroundBox[4]),qAbs(readstl.surroundBox[5]))-50.0;
+//        opengl->m_xMove=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
+//        opengl->m_yMove=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
+//        opengl->zoom=1.0/(qMax(qAbs(readstl.surroundBox[4]),qAbs(readstl.surroundBox[5])));
         opengl->colorFlag.resize(readstl.faceList.size());
         opengl->colorFlag.clear();
-        opengl->vertices=readstl.hashtable->vertices;
-        opengl->faceList=readstl.faceList;
+        vector<vector<int>> index;
+        int j=0;
+        for (int i=0;i<readstl.hashtable->vertices.size();i++)
+        {
+            tableNode *vertex =readstl.hashtable->vertices[i];
+            if(vertex!=NULL)
+            {
+                vector<int> tmp(2);
+                tmp[0]=j;tmp[1]=i;
+                index.push_back(tmp);
+                opengl->vertices.push_back(vertex->point.x);
+                opengl->vertices.push_back(vertex->point.y);
+                opengl->vertices.push_back(vertex->point.z);
+                j++;
+            }
+        }
+        for (int i=0;i<readstl.faceList.size();i++)
+        {
+            for (int j=0;j<3;j++)
+            {
+                for(int k=0;k<index.size();k++)
+                {
+                    if(index[k][1]==readstl.faceList[i][j])
+                    {
+                        opengl->faceList.push_back(index[k][0]);
+                    }
+                }
+            }
+        }
         qDebug()<<"time of OpenGl:"<<time.elapsed()/1000.0/1000.0<<"s";
         showMemoryInfo();
         qDebug()<<"number of vertices:"<<readstl.hashtable->size;
         qDebug()<<"number of faces:"<<readstl.faceList.size()<<endl;
-        cout<<"number of normals:"<<readstl.normalList.size()<<endl;
+        qDebug()<<"number of normals:"<<readstl.normalList.size()<<endl;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
