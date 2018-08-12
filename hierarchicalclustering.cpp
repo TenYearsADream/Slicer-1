@@ -45,7 +45,7 @@ vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > data
        sum +=accumulate(dTable[i].begin(),dTable[i].end(), 0.0);
     }
     double mean =  sum / (dTable.size()*dTable[0].size()); //均值
-    cout<<mean<<endl;
+    //cout<<mean<<endl;
 //    for(int i=0;i<dTable.size();i++)
 //    {
 //        for(int j=0;j<dTable[i].size();j++)
@@ -129,7 +129,7 @@ vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > data
                 minsdf=dataset[clusterTable[i][j]][0];
             }
         }
-        cout<<area<<" "<<maxsdf<<" "<<minsdf<<endl;
+        //cout<<area<<" "<<maxsdf<<" "<<minsdf<<endl;
         if(i!=0)
         if((maxsdf/(minsdf+0.001))<10 || area/totalArea>0.1)
         {

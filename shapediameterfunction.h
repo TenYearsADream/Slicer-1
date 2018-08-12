@@ -5,6 +5,9 @@
 #include "hashtable.h"
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
+typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
+typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
+
 using namespace std;
 struct sdfValue
 {
@@ -23,7 +26,7 @@ public:
     ~ShapeDiameterFunction();
     vector<sdfValue> *charvalue;
     vector<vector<double>> calculateSDF(vector <tableNode *> vertices, vector<vector<size_t>> faceList);
-    void constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList);
+    Mesh constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList);
 private:
     int getIndex(vector<vector<int>> index,int ID);
     vector<vector<double>> normalize(vector<vector<double>> charValue);

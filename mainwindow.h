@@ -24,6 +24,7 @@ public:
     ReadSTLFile readstl;
 private slots:
     void modelSegment();
+    void modelSlice();
 private:
     void openFile();
     QAction *openAction;
@@ -32,7 +33,7 @@ private:
     ShapeDiameterFunction *shapediameterfunction;
     bool ReadASCII(uchar *buffer);
     bool ReadBinary(uchar *buffer);
-    QDoubleSpinBox *pSpinBox;
+    QDoubleSpinBox *segSpinBox,*sliceSpinBox;
 };
 
 #endif // MAINWINDOW_H

@@ -20,7 +20,8 @@ SOURCES += main.cpp\
     readstlfile.cpp \
     shapediameterfunction.cpp \
     hashtable.cpp \
-    hierarchicalclustering.cpp
+    hierarchicalclustering.cpp \
+    Slice.cpp
 
 HEADERS  += mainwindow.h \
     myglwidget.h \
@@ -29,7 +30,8 @@ HEADERS  += mainwindow.h \
     readstlfile.h \
     shapediameterfunction.h \
     hashtable.h \
-    hierarchicalclustering.h
+    hierarchicalclustering.h \
+    Slice.h
 
 DISTFILES += \
     resource/open-file.png

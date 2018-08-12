@@ -1,6 +1,5 @@
 ﻿#include "shapediameterfunction.h"
 #include <boost/foreach.hpp>
-
 #include <CGAL/boost/graph/graph_traits_Surface_mesh.h>
 #include <CGAL/boost/graph/Face_filtered_graph.h>
 #include <CGAL/Polygon_mesh_processing/measure.h>
@@ -16,7 +15,6 @@ typedef Mesh::Property_map<face_descriptor,double> Facet_double_map;
 typedef Mesh::Property_map<face_descriptor, size_t> Facet_int_map;
 typedef CGAL::Face_filtered_graph<Mesh> Filtered_graph;
 using namespace std;
-Mesh mesh;
 ShapeDiameterFunction::ShapeDiameterFunction(){
     cout<<"ShapeDiameterFunction"<<endl;
 }
@@ -26,7 +24,7 @@ ShapeDiameterFunction::~ShapeDiameterFunction(){
 
 vector<vector<double>> ShapeDiameterFunction::calculateSDF(vector <tableNode *> vertices, vector<vector<size_t>> faceList)
 {
-    constructMesh(vertices,faceList);
+    Mesh mesh=constructMesh(vertices,faceList);
     Facet_double_map sdf_property_map = mesh.add_property_map<face_descriptor,double>("f:sdf").first;
     pair<double, double> min_max_sdf=CGAL::sdf_values(mesh, sdf_property_map);
     //cout<< "minimum SDF: " << min_max_sdf.first<< " maximum SDF: " << min_max_sdf.second <<endl;
@@ -56,8 +54,9 @@ vector<vector<double>> ShapeDiameterFunction::calculateSDF(vector <tableNode *> 
     return normalize(chardata);
 }
 
-void ShapeDiameterFunction::constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList)
+Mesh ShapeDiameterFunction::constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList)
 {
+    Mesh mesh;
     mesh.clear();
     vector<vector<int>> index;
     int j=0;
@@ -80,9 +79,11 @@ void ShapeDiameterFunction::constructMesh(vector <tableNode *> vertices,vector<v
         vertex_descriptor vy(getIndex(index,faceList[i][1]));
         vertex_descriptor vz(getIndex(index,faceList[i][2]));
         //cout<<vx<<" "<<vy<<" "<<vz<<endl;
+        //mesh.add_edge(vx,vy);mesh.add_edge(vy,vz);mesh.add_edge(vz,vx);
         mesh.add_face(vx,vy,vz);
     }
     //cout<<"number of faces:"<<mesh.faces().size()<<endl;
+    return mesh;
 }
 
 int ShapeDiameterFunction::getIndex(vector<vector<int> > index, int ID)

@@ -12,6 +12,7 @@
 #include <sstream>
 #include "point3f.h"
 #include "hashtable.h"
+#include "Slice.h"
 #include <GL/GLU.h>
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
@@ -27,6 +28,7 @@ public:
     ~MyGLWidget();
     vector<GLushort> indices;
     vector<GLfloat> vertices;
+    vector<vector<Point>> intrpoints;
     vector <vector<int>> clusterTable;
     GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis
 private:

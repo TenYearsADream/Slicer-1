@@ -19,12 +19,14 @@
 #include "Psapi.h"
 #include "mainwindow.h"
 #include "hierarchicalclustering.h"
+#include "Slice.h"
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle(tr("Slicer"));
+    setMinimumSize(800,640);
     openAction = new QAction(QIcon(":/images/file-open"), tr("&Open..."), this);
     openAction->setShortcuts(QKeySequence::Open);
     openAction->setStatusTip(tr("Open an existing file"));
@@ -39,30 +41,38 @@ MainWindow::MainWindow(QWidget *parent)
     this->setCentralWidget(cenWidget);
 
     opengl= new MyGLWidget(cenWidget);
-    tableWidget =new MyTableWidget((cenWidget));
-    QPushButton *button = new QPushButton(tr("segment"),(cenWidget));    
-    pSpinBox = new QDoubleSpinBox(cenWidget);
+    //tableWidget =new MyTableWidget((cenWidget));
+    QPushButton *segmentButton = new QPushButton(tr("segment"),(cenWidget));
+    QPushButton *sliceButton = new QPushButton(tr("slice"),(cenWidget));
 
-    pSpinBox->setRange(0.1, 20);  // 范围
-    pSpinBox->setDecimals(2);  // 精度
-    pSpinBox->setSingleStep(0.01); // 步长
+    sliceSpinBox = new QDoubleSpinBox(cenWidget);
+    sliceSpinBox->setRange(0.1, 20);  // 范围
+    sliceSpinBox->setDecimals(2);  // 精度
+    sliceSpinBox->setSingleStep(0.05); // 步长
 
-    connect(button,SIGNAL(clicked()),this,SLOT(modelSegment()));
+    segSpinBox = new QDoubleSpinBox(cenWidget);
+    segSpinBox->setRange(0.1, 20);  // 范围
+    segSpinBox->setDecimals(2);  // 精度
+    segSpinBox->setSingleStep(0.01); // 步长
+
+    connect(segmentButton,SIGNAL(clicked()),this,SLOT(modelSegment()));
+    connect(sliceButton,SIGNAL(clicked()),this,SLOT(modelSlice()));
+
     QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
-
     QVBoxLayout *rightlayout = new QVBoxLayout(cenWidget);
-    QSplitter *splitter=new QSplitter(cenWidget);
 
-    rightlayout->addWidget(tableWidget);
-    rightlayout->addWidget(button);
-    rightlayout->addWidget(pSpinBox);
-    splitter->addWidget(opengl);
-    splitter->setMinimumWidth(400);
-    splitter->setMinimumHeight(400);
+    //rightlayout->addWidget(tableWidget);
+    rightlayout->addWidget(sliceButton,0,Qt::AlignCenter);
+    rightlayout->addWidget(sliceSpinBox,0,Qt::AlignCenter);
+    rightlayout->addWidget(segmentButton,0,Qt::AlignCenter);
+    rightlayout->addWidget(segSpinBox,0,Qt::AlignCenter);
+
+
     cenWidget->setLayout(mainlayout);
-
-    mainlayout->addWidget(splitter);
+    mainlayout->addWidget(opengl);
     mainlayout->addLayout(rightlayout);
+    mainlayout->setStretchFactor(opengl, 4);
+    mainlayout->setStretchFactor(rightlayout, 1);
     setStatusTip(tr("ready"));
 
 }
@@ -95,10 +105,10 @@ void MainWindow::openFile()
         //qDebug()<<"number of faces:"<<readstl.NumTri()<<endl;
         //qDebug()<<readstl.surroundBox[1]<<endl;
         time.start();
-        tableWidget->setRowCount(readstl.NumTri());
-        tableWidget->setData(readstl.hashtable->vertices,readstl.faceList);
-        tableWidget->show();
-        qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
+//        tableWidget->setRowCount(readstl.NumTri());
+//        tableWidget->setData(readstl.hashtable->vertices,readstl.faceList);
+//        tableWidget->show();
+//        qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
         time.start();
         opengl->xtrans=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
         opengl->ytrans=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
@@ -150,7 +160,7 @@ void MainWindow::openFile()
 void MainWindow::modelSegment()
 {
     HierarchicalClustering hierarchicalclustering;
-    double esp=pSpinBox->value();
+    double esp=segSpinBox->value();
     if(!readstl.faceList.empty())
     {
         vector<vector<double>> charValue=shapediameterfunction->calculateSDF(readstl.hashtable->vertices,readstl.faceList);
@@ -165,4 +175,21 @@ void MainWindow::modelSegment()
                              tr("You did not import any model."));
     }
 
+}
+
+void MainWindow::modelSlice()
+{
+    Slice slice;
+    slice.thick=sliceSpinBox->value();
+    if(!readstl.faceList.empty())
+    {
+        slice.mesh=shapediameterfunction->constructMesh(readstl.hashtable->vertices,readstl.faceList);
+        slice.intrPoints(readstl.surroundBox[4],readstl.surroundBox[5]);
+        opengl->intrpoints=slice.intrpoints;
+        cout<<"number of layers:"<<slice.layernumber<<endl;
+
+    } else {
+        QMessageBox::warning(this, tr("error"),
+                             tr("You did not import any model."));
+    }
 }
