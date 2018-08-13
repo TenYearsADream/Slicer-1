@@ -13,6 +13,7 @@
 #include <QTableView>
 #include <QDebug>
 #include <Qtime>
+#include <QLabel>
 #include <iostream>
 #include "windows.h"
 #include"WinBase.h"
@@ -26,7 +27,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     setWindowTitle(tr("Slicer"));
-    setMinimumSize(800,640);
+    setMinimumSize(1000,640);
     openAction = new QAction(QIcon(":/images/file-open"), tr("&Open..."), this);
     openAction->setShortcuts(QKeySequence::Open);
     openAction->setStatusTip(tr("Open an existing file"));
@@ -50,6 +51,12 @@ MainWindow::MainWindow(QWidget *parent)
     sliceSpinBox->setDecimals(2);  // 精度
     sliceSpinBox->setSingleStep(0.05); // 步长
 
+    layerSlider = new QSlider(Qt::Horizontal);
+    QLabel *layerLable = new QLabel();
+    layerLable->setText("layer:");
+    layerSpinBox=new QSpinBox(cenWidget);
+    layerSpinBox->setValue(0);
+
     segSpinBox = new QDoubleSpinBox(cenWidget);
     segSpinBox->setRange(0.1, 20);  // 范围
     segSpinBox->setDecimals(2);  // 精度
@@ -59,20 +66,31 @@ MainWindow::MainWindow(QWidget *parent)
     connect(sliceButton,SIGNAL(clicked()),this,SLOT(modelSlice()));
 
     QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
-    QVBoxLayout *rightlayout = new QVBoxLayout(cenWidget);
+    QVBoxLayout *rightlayout = new QVBoxLayout();
+
+    QHBoxLayout *layerlayout = new QHBoxLayout();
 
     //rightlayout->addWidget(tableWidget);
     rightlayout->addWidget(sliceButton,0,Qt::AlignCenter);
     rightlayout->addWidget(sliceSpinBox,0,Qt::AlignCenter);
+
+    layerlayout->addWidget(layerLable);
+    layerlayout->addWidget(layerSlider);
+    layerlayout->addWidget(layerSpinBox);
+    QObject::connect(layerSpinBox,SIGNAL(valueChanged(int)),layerSlider,SLOT(setValue(int))); //将spinBox的数值传向slider信号槽
+    QObject::connect(layerSlider,SIGNAL(valueChanged(int)),layerSpinBox,SLOT(setValue(int)));//将slider的数值传向spinBox信号槽
+    QObject::connect(layerSlider,SIGNAL(valueChanged(int)),opengl,SLOT(setLayer(int)));
+    rightlayout->addLayout(layerlayout);
+
+
     rightlayout->addWidget(segmentButton,0,Qt::AlignCenter);
     rightlayout->addWidget(segSpinBox,0,Qt::AlignCenter);
-
 
     cenWidget->setLayout(mainlayout);
     mainlayout->addWidget(opengl);
     mainlayout->addLayout(rightlayout);
     mainlayout->setStretchFactor(opengl, 4);
-    mainlayout->setStretchFactor(rightlayout, 1);
+    mainlayout->setStretchFactor(rightlayout,2);
     setStatusTip(tr("ready"));
 
 }
@@ -116,6 +134,7 @@ void MainWindow::openFile()
         opengl->clusterTable.clear();
         opengl->vertices.clear();
         opengl->indices.clear();
+        opengl->intrpoints.clear();
         vector<vector<int>> index;
         int j=0;
         for (int i=0;i<readstl.hashtable->vertices.size();i++)
@@ -180,6 +199,9 @@ void MainWindow::modelSegment()
 void MainWindow::modelSlice()
 {
     Slice slice;
+    opengl->clusterTable.clear();
+    opengl->intrpoints.clear();
+    layerSlider->setValue(1);
     slice.thick=sliceSpinBox->value();
     if(!readstl.faceList.empty())
     {
@@ -187,6 +209,8 @@ void MainWindow::modelSlice()
         slice.intrPoints(readstl.surroundBox[4],readstl.surroundBox[5]);
         opengl->intrpoints=slice.intrpoints;
         cout<<"number of layers:"<<slice.layernumber<<endl;
+        layerSlider->setRange(1,slice.layernumber);
+        layerSpinBox->setRange(1,slice.layernumber);
 
     } else {
         QMessageBox::warning(this, tr("error"),

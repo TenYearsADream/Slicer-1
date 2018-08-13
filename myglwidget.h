@@ -31,10 +31,10 @@ public:
     vector<vector<Point>> intrpoints;
     vector <vector<int>> clusterTable;
     GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis
+    int layer;
 private:
     HDC hdc;
     QTimer *timer;
-    //GLdouble colorMap[8][3];
     QOpenGLShaderProgram *program;
 private:
     //变换矩阵
@@ -54,6 +54,10 @@ protected:
     void mousePressEvent(QMouseEvent *);
     void wheelEvent(QWheelEvent *);
 
+    void paintSlice(int layer);
+
+public slots:
+    void setLayer(int l);
 };
 #endif // MYGLWIDGET
 

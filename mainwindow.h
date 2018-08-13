@@ -6,6 +6,8 @@
 #include <QPushButton>
 #include <QTableWidget>
 #include <QDoubleSpinBox>
+#include <QSlider>
+#include <QSpinBox>
 #include "myglwidget.h"
 #include "mytablewidget.h"
 #include "readstlfile.h"
@@ -34,6 +36,8 @@ private:
     bool ReadASCII(uchar *buffer);
     bool ReadBinary(uchar *buffer);
     QDoubleSpinBox *segSpinBox,*sliceSpinBox;
+    QSlider *layerSlider ;
+    QSpinBox *layerSpinBox;
 };
 
 #endif // MAINWINDOW_H
