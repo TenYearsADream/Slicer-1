@@ -11,12 +11,16 @@ typedef boost::graph_traits<Mesh>::face_descriptor face_descriptor;
 struct intersectFace
 {
     face_descriptor fd;
-    bool Flag;
-    intersectFace(){};
-    intersectFace(face_descriptor facedescriptor,bool flag)
+    bool isSliced;
+    bool isParallel;
+    intersectFace(){
+        isSliced=false;
+    };
+    intersectFace(face_descriptor facedescriptor,bool issliced,bool isparallel)
     {
         fd=facedescriptor;
-        Flag=flag;
+        isSliced=issliced;
+        isParallel=isparallel;
     }
 };
 
@@ -33,8 +37,8 @@ public:
 private:
     vector<intersectFace> intrsurfs;
     void intrSurfs(double zheight);
-    bool isIntr(CGAL::Halfedge_around_face_iterator<Mesh> e,double zheight,int i);
-    Point intersectPoint(CGAL::Halfedge_around_face_iterator<Mesh> e,double z,int i);
+    bool isIntr(CGAL::Halfedge_around_face_iterator<Mesh> e,double zheight);
+    Point intersectPoint(CGAL::Halfedge_around_face_iterator<Mesh> e,double z);
 };
 
 #endif // SLICE_H
