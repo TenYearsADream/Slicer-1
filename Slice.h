@@ -10,17 +10,22 @@ typedef Kernel::Point_3 Point;
 typedef boost::graph_traits<Mesh>::face_descriptor face_descriptor;
 struct intersectFace
 {
-    face_descriptor fd;
+    Mesh::Face_index Faceindex;
     bool isSliced;
     bool isParallel;
-    intersectFace(){
-        isSliced=false;
-    };
-    intersectFace(face_descriptor facedescriptor,bool issliced,bool isparallel)
+    intersectFace(Mesh::Face_index faceindex,bool issliced,bool isparallel)
     {
-        fd=facedescriptor;
+        Faceindex=faceindex;
         isSliced=issliced;
         isParallel=isparallel;
+    }
+};
+struct sliceData
+{
+    vector<vector<Point>> Points;
+    sliceData(vector<vector<Point>> point)
+    {
+        Points=point;
     }
 };
 
@@ -30,7 +35,7 @@ public:
     Slice();
     ~Slice();
     Mesh mesh;
-    vector<vector<Point>> intrpoints;
+    vector<sliceData> intrpoints;
     void intrPoints(double zmin,double zmax);
     double thick;
     int layernumber;
@@ -39,6 +44,8 @@ private:
     void intrSurfs(double zheight);
     bool isIntr(CGAL::Halfedge_around_face_iterator<Mesh> e,double zheight);
     Point intersectPoint(CGAL::Halfedge_around_face_iterator<Mesh> e,double z);
+    bool isCoplanar(Mesh::Face_index f0,Mesh::Face_index f1);
+    vector<vector<Point>> areaSort(vector<vector<Point>> points);
 };
 
 #endif // SLICE_H

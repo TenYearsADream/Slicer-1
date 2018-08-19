@@ -28,14 +28,14 @@ public:
     ~MyGLWidget();
     vector<GLushort> indices;
     vector<GLfloat> vertices;
-    vector<vector<Point>> intrpoints;
+    vector<sliceData> intrpoints;
     vector <vector<int>> clusterTable;
     GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis
     int layer;
 private:
     HDC hdc;
     QTimer *timer;
-    QOpenGLShaderProgram *program;
+    QOpenGLShaderProgram *program,*sliceProgram;
 private:
     //变换矩阵
     QMatrix4x4 mvpMatrix;
@@ -55,6 +55,7 @@ protected:
     void wheelEvent(QWheelEvent *);
 
     void paintSlice(int layer);
+    void paintModel();
 
 public slots:
     void setLayer(int l);

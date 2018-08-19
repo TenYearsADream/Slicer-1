@@ -178,6 +178,7 @@ void MainWindow::openFile()
 
 void MainWindow::modelSegment()
 {
+    opengl->intrpoints.clear();
     HierarchicalClustering hierarchicalclustering;
     double esp=segSpinBox->value();
     if(!readstl.faceList.empty())

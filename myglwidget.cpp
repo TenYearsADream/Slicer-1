@@ -55,12 +55,22 @@ void MyGLWidget::initializeGL()
     // fragment shader
     QOpenGLShader *fshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
     fshader->compileSourceFile("F:/QT/Slicer/frag.txt");
+    QOpenGLShader *sliceshader = new QOpenGLShader(QOpenGLShader::Fragment, this);
+    sliceshader->compileSourceFile("F:/QT/Slicer/sliceFrag.txt");
+
+    sliceProgram = new QOpenGLShaderProgram;
+    sliceProgram->addShader(vshader);
+    sliceProgram->addShader(sliceshader);
+    sliceProgram->link();
+    //sliceProgram->bind();
+
     program = new QOpenGLShaderProgram;
     program->addShader(vshader);
     program->addShader(gshader);
     program->addShader(fshader);
     program->link();
     program->bind();
+
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glEnable(GL_DEPTH_TEST);					//开启深度缓存
@@ -81,6 +91,8 @@ void MyGLWidget::initializeGL()
     program->setUniformValue("Light.Ls", 1.0f, 1.0f, 1.0f);
     program->setUniformValue("Material.Shininess", 100.0f);
     program->setUniformValue("ViewportMatrix", view);
+
+
 }
 
 
@@ -103,85 +115,58 @@ void MyGLWidget::paintGL()
     model.translate(xtrans, -ytrans, ztrans);
     model.rotate(rotation);
     QMatrix4x4 mv = view * model;
-    program->setUniformValue("ModelViewMatrix", mv);
-    program->setUniformValue("NormalMatrix", mv.normalMatrix());
-    program->setUniformValue("MVP", projection * mv);
-    program->bind();
-
-    unsigned int handle[3];
-    glGenBuffers(3, handle);
-
-    glEnableVertexAttribArray(0);  // Vertex position
-    glBindBuffer(GL_ARRAY_BUFFER, handle[0]);
-    glVertexAttribPointer( (GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, ((GLubyte *)NULL + (0)) );
-
-    glEnableVertexAttribArray(1);  // Vertex normal
-    glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
-    glVertexAttribPointer( (GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, ((GLubyte *)NULL + (0)) );
-
-    glBindBuffer(GL_ARRAY_BUFFER, handle[0]);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat),vertices.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat),vertices.data(), GL_STATIC_DRAW);
-    if(!indices.empty())
+    if(!intrpoints.empty())
     {
-        if(clusterTable.empty())
+        if(!intrpoints[layer].Points.empty())
         {
-            if(!intrpoints.empty())
-            {
-                paintSlice(layer);
-            }
-            else{
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER,indices.size()*sizeof(GLushort),indices.data(), GL_STATIC_DRAW);
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
-                program->setUniformValue("SegmentColor",QVector3D(colorMap[0][0],colorMap[0][1],colorMap[0][2]));
-                program->setUniformValue("isSlice",false);
-                //开始绘制
-                glDrawElements(GL_TRIANGLES,(GLsizei)indices.size(), GL_UNSIGNED_SHORT, 0);
-            }
-        }
-        else
-        {
-            vector<GLushort> index;
-            for(int i=0;i<clusterTable.size();i++)
-            {
-                vector<GLushort>().swap(index);
-                for(int j=0;j<clusterTable[i].size();j++)
-                {
-                    index.push_back(indices[3*clusterTable[i][j]+0]);
-                    index.push_back(indices[3*clusterTable[i][j]+1]);
-                    index.push_back(indices[3*clusterTable[i][j]+2]);
-                }
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER,index.size()*sizeof(GLushort),index.data(), GL_STATIC_DRAW);
-
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
-                program->setUniformValue("SegmentColor",QVector3D(colorMap[i][0],colorMap[i][1],colorMap[i][2]));
-                //开始绘制
-                glDrawElements(GL_TRIANGLES,(GLsizei)index.size(), GL_UNSIGNED_SHORT, 0);
-            }
+            sliceProgram->setUniformValue("ModelViewMatrix", mv);
+            sliceProgram->setUniformValue("NormalMatrix", mv.normalMatrix());
+            sliceProgram->setUniformValue("MVP", projection * mv);
+            sliceProgram->bind();
+            paintSlice(layer);
         }
     }
-
+    else{
+        program->setUniformValue("ModelViewMatrix", mv);
+        program->setUniformValue("NormalMatrix", mv.normalMatrix());
+        program->setUniformValue("MVP", projection * mv);
+        program->bind();
+        paintModel();
+    }
 }
 
 void::MyGLWidget::paintSlice(int l)
 {
+    //cout<<intrpoints.size()<<endl;
     vector<GLushort> sliceindices;
     vector<GLfloat> slicevertices;
-    for(int i=0;i<intrpoints[l].size();i++)
+    for(int i=0;i<intrpoints[l].Points.size();i++)
     {
-        slicevertices.push_back(intrpoints[l][i].x());
-        slicevertices.push_back(intrpoints[l][i].y());
-        slicevertices.push_back(intrpoints[l][i].z());
+        for(int j=0;j<intrpoints[l].Points[i].size();j++)
+        {
+            slicevertices.push_back(intrpoints[l].Points[i][j].x());
+            slicevertices.push_back(intrpoints[l].Points[i][j].y());
+            slicevertices.push_back(intrpoints[l].Points[i][j].z());
+        }
     }
-    for(int j=1;j<intrpoints[l].size()-1;j++)
+    for(int i=0;i<intrpoints[l].Points.size();i++)
     {
-        sliceindices.push_back(0);
-        sliceindices.push_back(j);
-        sliceindices.push_back(j+1);
+        size_t n;
+        if(i>0)
+            n=intrpoints[l].Points[i-1].size();
+        else
+            n=0;
+        for(int j=0;j<intrpoints[l].Points[i].size();j++)
+        {
+            sliceindices.push_back(n+j);
+            if(j+1==intrpoints[l].Points[0].size())
+            {
+                sliceindices.push_back(n);
+            }
+            else
+                sliceindices.push_back(n+j+1);
+        }
+
     }
 
     unsigned int slicehandle[3];
@@ -204,11 +189,63 @@ void::MyGLWidget::paintSlice(int l)
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slicehandle[2]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER,sliceindices.size()*sizeof(GLfloat),sliceindices.data(), GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slicehandle[2]);
-
-    program->setUniformValue("SegmentColor",QVector3D(colorMap[0][0],colorMap[0][1],colorMap[0][2]));
     //开始绘制
-    //cout<<sliceindices.size()<<endl;
-    glDrawElements(GL_TRIANGLES,(GLsizei)sliceindices.size(), GL_UNSIGNED_SHORT, 0);
+    glDrawElements(GL_LINES,(GLsizei)sliceindices.size(), GL_UNSIGNED_SHORT,0);
+}
+
+void MyGLWidget::paintModel()
+{
+    unsigned int handle[3];
+    glGenBuffers(3, handle);
+
+    glEnableVertexAttribArray(0);  // Vertex position
+    glBindBuffer(GL_ARRAY_BUFFER, handle[0]);
+    glVertexAttribPointer( (GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, ((GLubyte *)NULL + (0)) );
+
+    glEnableVertexAttribArray(1);  // Vertex normal
+    glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
+    glVertexAttribPointer( (GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, ((GLubyte *)NULL + (0)) );
+
+    glBindBuffer(GL_ARRAY_BUFFER, handle[0]);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat),vertices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
+    glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat),vertices.data(), GL_STATIC_DRAW);
+    if(!indices.empty())
+    {
+        if(clusterTable.empty())
+        {
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER,indices.size()*sizeof(GLushort),indices.data(), GL_STATIC_DRAW);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
+            program->setUniformValue("SegmentColor",QVector3D(colorMap[0][0],colorMap[0][1],colorMap[0][2]));
+            program->setUniformValue("isSlice",false);
+            //开始绘制
+            glDrawElements(GL_TRIANGLES,(GLsizei)indices.size(), GL_UNSIGNED_SHORT, 0);
+        }
+        else
+        {
+            vector<GLushort> index;
+            for(int i=0;i<clusterTable.size();i++)
+            {
+                vector<GLushort>().swap(index);
+                for(int j=0;j<clusterTable[i].size();j++)
+                {
+                    index.push_back(indices[3*clusterTable[i][j]+0]);
+                    index.push_back(indices[3*clusterTable[i][j]+1]);
+                    index.push_back(indices[3*clusterTable[i][j]+2]);
+                }
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER,index.size()*sizeof(GLushort),index.data(), GL_STATIC_DRAW);
+
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, handle[2]);
+                program->setUniformValue("SegmentColor",QVector3D(colorMap[i][0],colorMap[i][1],colorMap[i][2]));
+                program->setUniformValue("isSlice",false);
+                //开始绘制
+                glDrawElements(GL_TRIANGLES,(GLsizei)index.size(), GL_UNSIGNED_SHORT, 0);
+            }
+        }
+    }
 }
 
 void MyGLWidget::wheelEvent(QWheelEvent *event)
