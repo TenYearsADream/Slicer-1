@@ -22,9 +22,9 @@ ShapeDiameterFunction::~ShapeDiameterFunction(){
     cout<<"ShapeDiameterFunction"<<endl;
 }
 
-vector<vector<double>> ShapeDiameterFunction::calculateSDF(vector <tableNode *> vertices, vector<vector<size_t>> faceList)
+vector<vector<double>> ShapeDiameterFunction::calculateSDF(Mesh mesh)
 {
-    Mesh mesh=constructMesh(vertices,faceList);
+    //Mesh mesh=constructMesh(vertices,faceList);
     Facet_double_map sdf_property_map = mesh.add_property_map<face_descriptor,double>("f:sdf").first;
     pair<double, double> min_max_sdf=CGAL::sdf_values(mesh, sdf_property_map);
     //cout<< "minimum SDF: " << min_max_sdf.first<< " maximum SDF: " << min_max_sdf.second <<endl;
@@ -52,50 +52,6 @@ vector<vector<double>> ShapeDiameterFunction::calculateSDF(vector <tableNode *> 
     }
     //cout<<charvalue.size()<<endl;
     return normalize(chardata);
-}
-
-Mesh ShapeDiameterFunction::constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList)
-{
-    Mesh mesh;
-    mesh.clear();
-    vector<vector<int>> index;
-    int j=0;
-    for (int i=0;i<vertices.size();i++)
-    {
-        tableNode *vertex = vertices[i];
-        if(vertex!=NULL)
-        {
-            vector<int> tmp(2);
-            tmp[0]=j;tmp[1]=i;
-            index.push_back(tmp);
-            vertex_descriptor v0=mesh.add_vertex(Point(vertex->point.x,vertex->point.y,vertex->point.z));
-            j++;
-        }
-    }
-    //cout<<"number of vertices:"<<mesh.vertices().size()<<endl;
-    for(int i=0;i<faceList.size();i++)
-    {
-        vertex_descriptor vx(getIndex(index,faceList[i][0]));
-        vertex_descriptor vy(getIndex(index,faceList[i][1]));
-        vertex_descriptor vz(getIndex(index,faceList[i][2]));
-        //cout<<vx<<" "<<vy<<" "<<vz<<endl;
-        //mesh.add_edge(vx,vy);mesh.add_edge(vy,vz);mesh.add_edge(vz,vx);
-        mesh.add_face(vx,vy,vz);
-    }
-    //cout<<"number of faces:"<<mesh.faces().size()<<endl;
-    return mesh;
-}
-
-int ShapeDiameterFunction::getIndex(vector<vector<int> > index, int ID)
-{
-    for(int i=0;i<index.size();i++)
-    {
-        if(index[i][1]==ID)
-        {
-            return index[i][0];
-        }
-    }
-    return 0;
 }
 
 vector<vector<double>> ShapeDiameterFunction::normalize(vector<vector<double> > dataset)

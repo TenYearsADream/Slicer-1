@@ -12,6 +12,7 @@
 #include "mytablewidget.h"
 #include "readstlfile.h"
 #include "shapediameterfunction.h"
+#include "dataset.h"
 
 using namespace std;
 class MainWindow : public QMainWindow
@@ -33,6 +34,7 @@ private:
     MyGLWidget *opengl;
     MyTableWidget *tableWidget;
     ShapeDiameterFunction *shapediameterfunction;
+    dataSet *dataset;
     bool ReadASCII(uchar *buffer);
     bool ReadBinary(uchar *buffer);
     QDoubleSpinBox *segSpinBox,*sliceSpinBox;

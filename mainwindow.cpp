@@ -120,7 +120,7 @@ void MainWindow::openFile()
         time.start();
         readstl.ReadStlFile(filepath);
         qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";
-        //qDebug()<<"number of faces:"<<readstl.NumTri()<<endl;
+        //qDebug()<<"number of faces:"<<readstl->NumTri()<<endl;
         //qDebug()<<readstl.surroundBox[1]<<endl;
         time.start();
 //        tableWidget->setRowCount(readstl.NumTri());
@@ -128,47 +128,25 @@ void MainWindow::openFile()
 //        tableWidget->show();
 //        qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
         time.start();
-        opengl->xtrans=-(readstl.surroundBox[1]+readstl.surroundBox[0])/2.0;
-        opengl->ytrans=(readstl.surroundBox[2]+readstl.surroundBox[3])/2.0;
-        opengl->ztrans=1.0/(qMax(qAbs(readstl.surroundBox[4]),qAbs(readstl.surroundBox[5])));
+        dataset=new dataSet(readstl.hashtable->vertices,readstl.faceList);
+        for(int i=0;i<6;i++)
+        {
+            dataset->surroundBox[i]=readstl.surroundBox[i];
+        }
+        qDebug()<<"number of vertices:"<<dataset->mesh.number_of_vertices();
+        qDebug()<<"number of faces:"<<dataset->mesh.number_of_faces();
+        qDebug()<<"number of normals:"<<readstl.normalList.size();
+        opengl->xtrans=-(dataset->surroundBox[1]+dataset->surroundBox[0])/2.0;
+        opengl->ytrans=(dataset->surroundBox[2]+dataset->surroundBox[3])/2.0;
+        opengl->ztrans=1.0/(qMax(qAbs(dataset->surroundBox[4]),qAbs(dataset->surroundBox[5])));
         opengl->clusterTable.clear();
         opengl->vertices.clear();
         opengl->indices.clear();
-        opengl->intrpoints.clear();
-        vector<vector<int>> index;
-        int j=0;
-        for (int i=0;i<readstl.hashtable->vertices.size();i++)
-        {
-            tableNode *vertex =readstl.hashtable->vertices[i];
-            if(vertex!=NULL)
-            {
-                vector<int> tmp(2);
-                tmp[0]=j;tmp[1]=i;
-                index.push_back(tmp);
-                opengl->vertices.push_back(vertex->point.x);
-                opengl->vertices.push_back(vertex->point.y);
-                opengl->vertices.push_back(vertex->point.z);
-                j++;
-            }
-        }
-        for (int i=0;i<readstl.faceList.size();i++)
-        {
-            for (int j=0;j<3;j++)
-            {
-                for(int k=0;k<index.size();k++)
-                {
-                    if(index[k][1]==readstl.faceList[i][j])
-                    {
-                        opengl->indices.push_back(index[k][0]);
-                    }
-                }
-            }
-        }
+        opengl->intrpoints.clear();      
+        opengl->vertices=dataset->vertices;
+        opengl->indices=dataset->indices;
         qDebug()<<"time of OpenGl:"<<time.elapsed()/1000.0/1000.0<<"s";
         showMemoryInfo();
-        qDebug()<<"number of vertices:"<<readstl.hashtable->size;
-        qDebug()<<"number of faces:"<<readstl.faceList.size()<<endl;
-        qDebug()<<"number of normals:"<<readstl.normalList.size()<<endl;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
@@ -183,7 +161,7 @@ void MainWindow::modelSegment()
     double esp=segSpinBox->value();
     if(!readstl.faceList.empty())
     {
-        vector<vector<double>> charValue=shapediameterfunction->calculateSDF(readstl.hashtable->vertices,readstl.faceList);
+        vector<vector<double>> charValue=shapediameterfunction->calculateSDF(dataset->mesh);
 //        for(int i=0;i<charValue.size();i++)
 //        {
 //            cout<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
@@ -206,8 +184,8 @@ void MainWindow::modelSlice()
     slice.thick=sliceSpinBox->value();
     if(!readstl.faceList.empty())
     {
-        slice.mesh=shapediameterfunction->constructMesh(readstl.hashtable->vertices,readstl.faceList);
-        slice.intrPoints(readstl.surroundBox[4],readstl.surroundBox[5]);
+        slice.mesh=dataset->mesh;
+        slice.intrPoints(dataset->surroundBox[4],dataset->surroundBox[5]);
         opengl->intrpoints=slice.intrpoints;
         cout<<"number of layers:"<<slice.layernumber<<endl;
         layerSlider->setRange(1,slice.layernumber);

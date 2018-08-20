@@ -12,7 +12,7 @@ public:
     int NumTri();
     vector<Point3f> normalList;
     vector<vector<size_t>> faceList;
-    float  surroundBox[6];
+    float surroundBox[6];
     HashTable *hashtable;
 private:
     unsigned int unTriangles;

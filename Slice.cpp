@@ -39,12 +39,12 @@ void Slice::intrSurfs(double zheight)
         {
             intrsurfs.push_back(intersectFace(*f,true,false));
         }
-        else if(qAbs(zheight-zmin)<=1e-5 && qAbs(zheight-zmax)<=1e-5)
+        else if(qAbs(zheight-zmin)<=1e-15 && qAbs(zheight-zmax)<=1e-15)
         {
             intrsurfs.push_back(intersectFace(*f,true,true));
         }
     }
-    //cout<<"number of intrsurfs:"<<intrsurfs.size()<<endl;
+    cout<<"number of intrsurfs:"<<intrsurfs.size()<<endl;
 }
 
 void Slice::intrPoints(double zmin,double zmax)
@@ -61,7 +61,7 @@ void Slice::intrPoints(double zmin,double zmax)
             if(intrsurfs[i].isSliced)
             {
                 Mesh::Face_index fbegin=intrsurfs[i].Faceindex;
-                //cout<<"face:"<<fbegin<<endl;
+                cout<<"face:"<<fbegin<<endl;
                 vector<Mesh::Vertex_index>contourpoints;
                 vector<Point>point;
                 if(intrsurfs[i].isParallel)
@@ -123,9 +123,9 @@ void Slice::intrPoints(double zmin,double zmax)
                     for(int i=0;i<contourpoints.size();i++)
                     {
                         point.push_back(mesh.point(contourpoints[i]));
-                        //cout<<contourpoints[i]<<" ";
+                        cout<<contourpoints[i]<<" ";
                     }
-                    //cout<<endl;
+                    cout<<endl;
                     points.push_back(point);
                 }
                 else{
@@ -188,7 +188,7 @@ Point Slice::intersectPoint(CGAL::Halfedge_around_face_iterator<Mesh> e,double z
     Point p2=mesh.point(mesh.vertex(edgeindex,1));
     double x=p1.x()+(p2.x()-p1.x())*(z-p1.z())/(p2.z()-p1.z());
     double y=p1.y()+(p2.y()-p1.y())*(z-p1.z())/(p2.z()-p1.z());
-    //cout<<"intersectPoint:"<<x<<" "<<y<<" "<<z<<endl;
+    cout<<"intersectPoint:"<<x<<" "<<y<<" "<<z<<endl;
     return Point(x,y,z);
 }
 

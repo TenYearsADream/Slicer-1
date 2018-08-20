@@ -12,7 +12,6 @@ using namespace std;
 struct sdfValue
 {
     double _sdfvalue,_facearea;
-    sdfValue(){};
     sdfValue(double sdfvalue,double facearea)
     {
         _sdfvalue=sdfvalue;
@@ -25,10 +24,8 @@ public:
     ShapeDiameterFunction();
     ~ShapeDiameterFunction();
     vector<sdfValue> *charvalue;
-    vector<vector<double>> calculateSDF(vector <tableNode *> vertices, vector<vector<size_t>> faceList);
-    Mesh constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList);
+    vector<vector<double>> calculateSDF(Mesh mesh);
 private:
-    int getIndex(vector<vector<int>> index,int ID);
     vector<vector<double>> normalize(vector<vector<double>> charValue);
 };
 
