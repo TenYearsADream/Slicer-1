@@ -1,6 +1,7 @@
 ﻿#ifndef DATASET_H
 #define DATASET_H
 #include <vector>
+#include <QObject>
 #include "point3f.h"
 #include "hashtable.h"
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
@@ -16,9 +17,12 @@ public:
         float surroundBox[6];
         vector<unsigned short> indices;
         vector<float> vertices;
+        void rotateModel(int x,int y,int z);
 private:
         void constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList);
         int getIndex(vector<vector<int> > index, int ID);
+        void getIndices();
+
 };
 
 #endif // DATASET_H

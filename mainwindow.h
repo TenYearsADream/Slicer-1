@@ -28,6 +28,7 @@ public:
 private slots:
     void modelSegment();
     void modelSlice();
+    void modelPlace();
 private:
     void openFile();
     QAction *openAction;
@@ -40,6 +41,7 @@ private:
     QDoubleSpinBox *segSpinBox,*sliceSpinBox;
     QSlider *layerSlider ;
     QSpinBox *layerSpinBox;
+    QSpinBox *placeSpinBoxx,*placeSpinBoxy,*placeSpinBoxz;
 };
 
 #endif // MAINWINDOW_H

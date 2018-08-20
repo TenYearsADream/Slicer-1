@@ -14,6 +14,7 @@
 #include <QDebug>
 #include <Qtime>
 #include <QLabel>
+#include <QProgressDialog>
 #include <iostream>
 #include "windows.h"
 #include"WinBase.h"
@@ -43,54 +44,97 @@ MainWindow::MainWindow(QWidget *parent)
 
     opengl= new MyGLWidget(cenWidget);
     //tableWidget =new MyTableWidget((cenWidget));
-    QPushButton *segmentButton = new QPushButton(tr("segment"),(cenWidget));
-    QPushButton *sliceButton = new QPushButton(tr("slice"),(cenWidget));
+    QWidget *toolWidget=new QWidget(cenWidget);
+    QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
+    QVBoxLayout *toollayout = new QVBoxLayout();
+    cenWidget->setLayout(mainlayout);
+    mainlayout->addWidget(opengl);
+    mainlayout->addWidget(toolWidget);
+    toolWidget->setLayout(toollayout);
+    mainlayout->setStretchFactor(opengl, 4);
+    mainlayout->setStretchFactor(toolWidget,2);
 
+    //模型摆放布局
+    QLabel *placeLablex = new QLabel();
+    placeLablex->setText("Degree of rotation around X axis:");
+    placeSpinBoxx = new QSpinBox();
+    placeSpinBoxx->setRange(-360, 360);  // 范围
+    QLabel *placeLabley = new QLabel();
+    placeLabley->setText("Degree of rotation around Y axis:");
+    placeSpinBoxy = new QSpinBox();
+    placeSpinBoxy->setRange(-360, 360);  // 范围
+    QLabel *placeLablez = new QLabel();
+    placeLablez->setText("Degree of rotation around Z axis:");
+    placeSpinBoxz = new QSpinBox();
+    placeSpinBoxz->setRange(-360, 360);  // 范围
+    QPushButton *placeButton = new QPushButton(tr("place"));
+    connect(placeButton,SIGNAL(clicked()),this,SLOT(modelPlace()));
+    QWidget *modelsetQWidget=new QWidget(toolWidget);
+    QVBoxLayout *modellayout = new QVBoxLayout();
+    QHBoxLayout *modellayout1 = new QHBoxLayout();
+    QHBoxLayout *modellayout2 = new QHBoxLayout();
+    QHBoxLayout *modellayout3 = new QHBoxLayout();
+    //rightlayout->addWidget(tableWidget);
+    modellayout1->addWidget(placeLablex,0,Qt::AlignCenter);
+    modellayout1->addWidget(placeSpinBoxx,0,Qt::AlignCenter);
+    modellayout2->addWidget(placeLabley,0,Qt::AlignCenter);
+    modellayout2->addWidget(placeSpinBoxy,0,Qt::AlignCenter);
+    modellayout3->addWidget(placeLablez,0,Qt::AlignCenter);
+    modellayout3->addWidget(placeSpinBoxz,0,Qt::AlignCenter);
+    modellayout->addLayout(modellayout1);
+    modellayout->addLayout(modellayout2);
+    modellayout->addLayout(modellayout3);
+    modellayout->addWidget(placeButton);
+    modelsetQWidget->setLayout(modellayout);
+    toollayout->addWidget(modelsetQWidget);
+    toollayout->setStretchFactor(modelsetQWidget,4);
+
+    //分层显示布局
     sliceSpinBox = new QDoubleSpinBox(cenWidget);
     sliceSpinBox->setRange(0.1, 20);  // 范围
     sliceSpinBox->setDecimals(2);  // 精度
     sliceSpinBox->setSingleStep(0.05); // 步长
-
+    QPushButton *sliceButton = new QPushButton(tr("slice"),(cenWidget));
+    connect(sliceButton,SIGNAL(clicked()),this,SLOT(modelSlice()));
     layerSlider = new QSlider(Qt::Horizontal);
     QLabel *layerLable = new QLabel();
     layerLable->setText("layer:");
     layerSpinBox=new QSpinBox(cenWidget);
     layerSpinBox->setValue(0);
+    QWidget *layerQWidget=new QWidget(toolWidget);
+    //layerQWidget->setStyleSheet("background-color:green;");
+    QVBoxLayout *layerlayout = new QVBoxLayout();
+    QHBoxLayout *layerlayout1 = new QHBoxLayout();
+    layerlayout1->addWidget(sliceButton,0,Qt::AlignCenter);
+    layerlayout1->addWidget(sliceSpinBox,0,Qt::AlignCenter);
+    QHBoxLayout *layerlayout2 = new QHBoxLayout();
+    layerlayout2->addWidget(layerLable);
+    layerlayout2->addWidget(layerSlider);
+    layerlayout2->addWidget(layerSpinBox);
+    QObject::connect(layerSpinBox,SIGNAL(valueChanged(int)),layerSlider,SLOT(setValue(int))); //将spinBox的数值传向slider信号槽
+    QObject::connect(layerSlider,SIGNAL(valueChanged(int)),layerSpinBox,SLOT(setValue(int)));//将slider的数值传向spinBox信号槽
+    QObject::connect(layerSlider,SIGNAL(valueChanged(int)),opengl,SLOT(setLayer(int)));
+    layerQWidget->setLayout(layerlayout);
+    layerlayout->addLayout(layerlayout1);
+    layerlayout->addLayout(layerlayout2);
+    toollayout->addWidget(layerQWidget);
+    toollayout->setStretchFactor(layerQWidget,4);
 
+    //模型分割布局
     segSpinBox = new QDoubleSpinBox(cenWidget);
     segSpinBox->setRange(0.1, 20);  // 范围
     segSpinBox->setDecimals(2);  // 精度
     segSpinBox->setSingleStep(0.01); // 步长
-
+    QPushButton *segmentButton = new QPushButton(tr("segment"),(cenWidget));
     connect(segmentButton,SIGNAL(clicked()),this,SLOT(modelSegment()));
-    connect(sliceButton,SIGNAL(clicked()),this,SLOT(modelSlice()));
+    QWidget *segmentQWidget=new QWidget(toolWidget);
+    QHBoxLayout *segmentlayout = new QHBoxLayout();
+    segmentlayout->addWidget(segmentButton,0,Qt::AlignCenter);
+    segmentlayout->addWidget(segSpinBox,0,Qt::AlignCenter);
+    segmentQWidget->setLayout(segmentlayout);
+    toollayout->addWidget(segmentQWidget);
+    toollayout->setStretchFactor(segmentQWidget,2);
 
-    QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
-    QVBoxLayout *rightlayout = new QVBoxLayout();
-
-    QHBoxLayout *layerlayout = new QHBoxLayout();
-
-    //rightlayout->addWidget(tableWidget);
-    rightlayout->addWidget(sliceButton,0,Qt::AlignCenter);
-    rightlayout->addWidget(sliceSpinBox,0,Qt::AlignCenter);
-
-    layerlayout->addWidget(layerLable);
-    layerlayout->addWidget(layerSlider);
-    layerlayout->addWidget(layerSpinBox);
-    QObject::connect(layerSpinBox,SIGNAL(valueChanged(int)),layerSlider,SLOT(setValue(int))); //将spinBox的数值传向slider信号槽
-    QObject::connect(layerSlider,SIGNAL(valueChanged(int)),layerSpinBox,SLOT(setValue(int)));//将slider的数值传向spinBox信号槽
-    QObject::connect(layerSlider,SIGNAL(valueChanged(int)),opengl,SLOT(setLayer(int)));
-    rightlayout->addLayout(layerlayout);
-
-
-    rightlayout->addWidget(segmentButton,0,Qt::AlignCenter);
-    rightlayout->addWidget(segSpinBox,0,Qt::AlignCenter);
-
-    cenWidget->setLayout(mainlayout);
-    mainlayout->addWidget(opengl);
-    mainlayout->addLayout(rightlayout);
-    mainlayout->setStretchFactor(opengl, 4);
-    mainlayout->setStretchFactor(rightlayout,2);
     setStatusTip(tr("ready"));
 
 }
@@ -195,4 +239,27 @@ void MainWindow::modelSlice()
         QMessageBox::warning(this, tr("error"),
                              tr("You did not import any model."));
     }
+}
+
+void MainWindow::modelPlace()
+{
+    opengl->clusterTable.clear();
+    opengl->intrpoints.clear();
+    int x=placeSpinBoxx->value();
+    int y=placeSpinBoxy->value();
+    int z=placeSpinBoxz->value();
+    if(!readstl.faceList.empty())
+    {
+        dataset->rotateModel(x,y,z);
+        opengl->xtrans=-(dataset->surroundBox[1]+dataset->surroundBox[0])/2.0;
+        opengl->ytrans=(dataset->surroundBox[2]+dataset->surroundBox[3])/2.0;
+        opengl->ztrans=1.0/(qMax(qAbs(dataset->surroundBox[4]),qAbs(dataset->surroundBox[5])));
+        opengl->vertices=dataset->vertices;
+        opengl->indices=dataset->indices;
+
+    } else {
+        QMessageBox::warning(this, tr("error"),
+                             tr("You did not import any model."));
+    }
+
 }

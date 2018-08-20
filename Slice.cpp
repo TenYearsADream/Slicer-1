@@ -35,11 +35,11 @@ void Slice::intrSurfs(double zheight)
         double zmin=*min_element(height.begin(),height.end());
         double zmax=*max_element(height.begin(),height.end());
         //cout<<zmin<<" "<<zmax<<" "<<zheight<<endl;
-        if(zheight>zmin && zheight <zmax)
+        if((zheight-zmin)>1e-4 && (zmax-zheight)>1e-4)
         {
             intrsurfs.push_back(intersectFace(*f,true,false));
         }
-        else if(qAbs(zheight-zmin)<=1e-15 && qAbs(zheight-zmax)<=1e-15)
+        else if((qAbs(zheight-zmin)<=1e-4) && (qAbs(zheight-zmax)<=1e-4))
         {
             intrsurfs.push_back(intersectFace(*f,true,true));
         }
@@ -61,7 +61,7 @@ void Slice::intrPoints(double zmin,double zmax)
             if(intrsurfs[i].isSliced)
             {
                 Mesh::Face_index fbegin=intrsurfs[i].Faceindex;
-                cout<<"face:"<<fbegin<<endl;
+                //cout<<"face:"<<fbegin<<endl;
                 vector<Mesh::Vertex_index>contourpoints;
                 vector<Point>point;
                 if(intrsurfs[i].isParallel)
@@ -85,7 +85,8 @@ void Slice::intrPoints(double zmin,double zmax)
                         contour.push_back(v);
                         CGAL::Vertex_around_target_circulator<Mesh> vbegin(mesh.halfedge(v),mesh), done(vbegin);
                         do {
-                            if(qAbs(mesh.point(*vbegin).z()-zheight)<1e-5)
+                            //cout<<*vbegin<<endl;
+                            if(qAbs(mesh.point(*vbegin).z()-zheight)<1e-4)
                             {
                                 vector<Mesh::Vertex_index>::iterator it = find(contourpoints.begin( ),contourpoints.end( ),*vbegin); //查找
                                 if(it==contourpoints.end( ))
@@ -112,7 +113,6 @@ void Slice::intrPoints(double zmin,double zmax)
                                         //cout <<zheight<<":"<<*vbegin<<" "<<mesh.point(*vbegin)<<endl;
                                     }
                                 }
-
                             }
                             vbegin++;
                         } while(vbegin != done);
@@ -123,9 +123,9 @@ void Slice::intrPoints(double zmin,double zmax)
                     for(int i=0;i<contourpoints.size();i++)
                     {
                         point.push_back(mesh.point(contourpoints[i]));
-                        cout<<contourpoints[i]<<" ";
+                        //cout<<contourpoints[i]<<" ";
                     }
-                    cout<<endl;
+                    //cout<<endl;
                     points.push_back(point);
                 }
                 else{
@@ -157,8 +157,11 @@ void Slice::intrPoints(double zmin,double zmax)
                     points.push_back(point);
                 }
             }
-        }        
-        intrpoints.push_back(sliceData(areaSort(points)));
+        }
+        if(!points.empty())
+        {
+            intrpoints.push_back(sliceData(areaSort(points)));
+        }
         zheight += thick;
         layernumber++;
     }
@@ -188,7 +191,7 @@ Point Slice::intersectPoint(CGAL::Halfedge_around_face_iterator<Mesh> e,double z
     Point p2=mesh.point(mesh.vertex(edgeindex,1));
     double x=p1.x()+(p2.x()-p1.x())*(z-p1.z())/(p2.z()-p1.z());
     double y=p1.y()+(p2.y()-p1.y())*(z-p1.z())/(p2.z()-p1.z());
-    cout<<"intersectPoint:"<<x<<" "<<y<<" "<<z<<endl;
+    //cout<<"intersectPoint:"<<x<<" "<<y<<" "<<z<<endl;
     return Point(x,y,z);
 }
 
@@ -256,14 +259,14 @@ vector<vector<Point>> Slice::areaSort(vector<vector<Point>> points)
     tmp=points[distance(area.begin(), max)];
     points[distance(area.begin(), max)]=points[0];
     points[0]=tmp;
-    for(int i=0;i<points.size();i++)
-    {
-        cout<<"第"<<i+1<<"个圈"<<endl;
-        for(int j=0;j<points[i].size();j++)
-        {
-            cout<<points[i][j].x()<<" "<<points[i][j].y()<<" "<<points[i][j].z()<<endl;
-        }
+//    for(int i=0;i<points.size();i++)
+//    {
+//        cout<<"第"<<i+1<<"个圈"<<endl;
+//        for(int j=0;j<points[i].size();j++)
+//        {
+//            cout<<points[i][j].x()<<" "<<points[i][j].y()<<" "<<points[i][j].z()<<endl;
+//        }
 
-    }
+//    }
     return points;
 }
