@@ -24,6 +24,7 @@ Slice::~Slice()
 void Slice::intrSurfs(double zheight)
 {
     vector<intersectFace>().swap(intrsurfs);
+    vector<float>().swap(normalangle);
     for(Mesh::Face_iterator f=mesh.faces_begin();f!=mesh.faces_end();f++)
     {
         CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
@@ -37,14 +38,18 @@ void Slice::intrSurfs(double zheight)
         //cout<<zmin<<" "<<zmax<<" "<<zheight<<endl;
         if((zheight-zmin)>1e-4 && (zmax-zheight)>1e-4)
         {
+            float cos=normalAngle(*f);
+            normalangle.push_back(sqrt(1-cos*cos));
             intrsurfs.push_back(intersectFace(*f,true,false));
         }
         else if((qAbs(zheight-zmin)<=1e-4) && (qAbs(zheight-zmax)<=1e-4))
         {
+            float cos=normalAngle(*f);
+            normalangle.push_back(sqrt(1-cos*cos));
             intrsurfs.push_back(intersectFace(*f,true,true));
         }
     }
-    cout<<"number of intrsurfs:"<<intrsurfs.size()<<endl;
+    //cout<<"number of intrsurfs:"<<intrsurfs.size()<<endl;
 }
 
 void Slice::intrPoints(double zmin,double zmax)
@@ -53,7 +58,7 @@ void Slice::intrPoints(double zmin,double zmax)
     while(zheight<=zmax)
     {
         vector<vector<Point>> points;
-        cout<<"layer of "<<layernumber+1<<":"<<endl;
+        //cout<<"layer of "<<layernumber+1<<":"<<endl;
         intrSurfs(zheight);
         vector<Mesh::Vertex_index>contour;
         for(int i=0;i<intrsurfs.size();i++)
@@ -151,7 +156,7 @@ void Slice::intrPoints(double zmin,double zmax)
                         hpre=*hnext;
                         //cout<<"hpre:"<<hpre<<endl;
                         fnext=mesh.face(mesh.opposite(*hnext));
-                        //cout<<"fnext:"<<fnext<<endl;
+                        //cout<<"fnext:"<<fnext<<" fpre："<<mesh.face(*hnext)<<endl;
                     }while(fnext!=fbegin);
                     point.pop_back();
                     points.push_back(point);
@@ -160,10 +165,28 @@ void Slice::intrPoints(double zmin,double zmax)
         }
         if(!points.empty())
         {
+            //cout<<points[0].size()<<endl;
             intrpoints.push_back(sliceData(areaSort(points)));
+            layernumber++;
+//            for(int i=0;i<normalangle.size();i++)
+//            {
+//                cout<<normalangle[i]<<" ";
+//            }
+//            cout<<endl;
+            float minnormalangle=*min_element(normalangle.begin(),normalangle.end());
+            //cout<<minnormalangle<<endl;
+            if(minnormalangle>0.99)
+                adaptthick=0.3;
+            else
+                adaptthick=0.05/(minnormalangle+1e-3);
         }
-        zheight += thick;
-        layernumber++;
+        if(adaptthick<0.1)adaptthick=0.1;
+        if(adaptthick>0.3)adaptthick=0.3;
+        //cout<<adaptthick<<endl;
+        if(isAdapt)
+            zheight += adaptthick;
+        else
+            zheight += thick;
     }
 }
 
@@ -195,7 +218,7 @@ Point Slice::intersectPoint(CGAL::Halfedge_around_face_iterator<Mesh> e,double z
     return Point(x,y,z);
 }
 
-bool Slice::isCoplanar(Mesh::Face_index f0,Mesh::Face_index f1)
+float Slice::normalAngle(Mesh::Face_index f0)
 {
     CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
     vector<Point> point;
@@ -204,37 +227,20 @@ bool Slice::isCoplanar(Mesh::Face_index f0,Mesh::Face_index f1)
         point.push_back(mesh.point(*vbegin));
         //cout << *vbegin<<":"<<mesh.point(*vbegin)<<endl;
     }
-    for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(f1), mesh);vbegin != vend;++vbegin)
-    {
-        point.push_back(mesh.point(*vbegin));
-        //cout << *vbegin<<":"<<mesh.point(*vbegin)<<endl;
-    }
     //cout<<point.size()<<endl;
-    float x1,x2,x3,y1,y2,y3,z1,z2,z3,nx1,ny1,nz1,nx2,ny2,nz2;
+    float x1,x2,x3,y1,y2,y3,z1,z2,z3,nx,ny,nz;
     //求面f0的法向量
     x1=point[0].x();y1=point[0].y();z1=point[0].z();
     x2=point[1].x();y2=point[1].y();z2=point[1].z();
-    x3=point[2].x();y3=point[2].y();z3=point[0].z();
-    nx1=(y2-y1)*(z3-z1)-(z2-z1)*(y3-y1);
-    ny1=(z2-z1)*(x3-x1)-(z3-z1)*(x2-x1);
-    nz1=(x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
-    //求面f1的法向量
-    x1=point[3].x();y1=point[3].y();z1=point[3].z();
-    x2=point[4].x();y2=point[4].y();z2=point[4].z();
-    x3=point[5].x();y3=point[5].y();z3=point[5].z();
-    nx2=(y2-y1)*(z3-z1)-(z2-z1)*(y3-y1);
-    ny2=(z2-z1)*(x3-x1)-(z3-z1)*(x2-x1);
-    nz2=(x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
-    //cout<<nx1<<" "<<ny1<<" "<<nz1<<" "<<nx2<<" "<<ny2<<" "<<nz2<<endl;
-    float dot=nx1*nx2+ny1*ny2+nz1*nz2;
-    float dist1=sqrt(nx1*nx1+ny1*ny1+nz1*nz1);
-    float dist2=sqrt(nx2*nx2+ny2*ny2+nz2*nz2);
-    float cos=dot/(dist1*dist2);
+    x3=point[2].x();y3=point[2].y();z3=point[2].z();
+    nx=(y2-y1)*(z3-z1)-(z2-z1)*(y3-y1);
+    ny=(z2-z1)*(x3-x1)-(z3-z1)*(x2-x1);
+    nz=(x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
+    //cout<<nx<<" "<<ny<<" "<<nz<<endl;
+    float dist=sqrt(nx*nx+ny*ny+nz*nz);
+    float cos=nz/dist;
     //cout<<cos<<endl;
-    if(qAbs(cos)<1)
-        return false;
-    else
-        return true;
+    return cos;
 }
 
 vector<vector<Point>> Slice::areaSort(vector<vector<Point>> points)

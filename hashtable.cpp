@@ -2,38 +2,35 @@
 #include <stdint.h>
 #include <string.h>
 #include <iostream>
+#include <sstream>
+#include <qmath.h>
 using namespace std;
 HashTable::HashTable(){
     size=0;
-    vertices.resize(1000000);
-}
-int HashTable::hash(long long ID){
-    int hash=0;
-    hash=ID % 999983;
-    return hash;
 }
 
-size_t HashTable::addPoint(long long ID,Point3f point){
-    tableNode *tmp=new tableNode(ID,point);
-    size_t index= hash(ID);
-    tableNode *cur=vertices[index];
-    if(cur==NULL)
+int HashTable::addPoint(string key,Point point){
+    int index;
+    auto it = verticesmap.find(QString::fromStdString(key));
+    if(it != verticesmap.end())
     {
-        vertices[index]=tmp;
-        size++;
-        return index;
+        index=it.value();
+        //cout<<"索引："<<it.value()<<endl;
     }
     else
     {
-        return index;
+        vertices.push_back(point);
+        verticesmap.insert(QString::fromStdString(key),size);
+        index=size;
+        size++;
     }
+    return index;
 }
 void HashTable::show()
 {
+    //cout<<verticesmap.size()<<endl;
     for(int i=0;i<vertices.size();i++)
     {
-        tableNode *cur = vertices[i];
-        if(cur!=NULL)
-            cout<<cur->point.x<<" "<<cur->point.y<<" "<<cur->point.z<<endl;
+        cout<<vertices[i].x()<<" "<<vertices[i].y()<<" "<<vertices[i].z()<<endl;
     }
 }

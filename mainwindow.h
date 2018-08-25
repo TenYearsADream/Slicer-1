@@ -8,6 +8,7 @@
 #include <QDoubleSpinBox>
 #include <QSlider>
 #include <QSpinBox>
+#include <QRadioButton>
 #include "myglwidget.h"
 #include "mytablewidget.h"
 #include "readstlfile.h"
@@ -42,6 +43,7 @@ private:
     QSlider *layerSlider ;
     QSpinBox *layerSpinBox;
     QSpinBox *placeSpinBoxx,*placeSpinBoxy,*placeSpinBoxz;
+    QRadioButton *isAdapt;
 };
 
 #endif // MAINWINDOW_H

@@ -10,7 +10,6 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include "point3f.h"
 #include "hashtable.h"
 #include "Slice.h"
 #include <GL/GLU.h>

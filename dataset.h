@@ -2,7 +2,6 @@
 #define DATASET_H
 #include <vector>
 #include <QObject>
-#include "point3f.h"
 #include "hashtable.h"
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
@@ -11,7 +10,7 @@ typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
 class dataSet
 {
 public:
-        dataSet(vector <tableNode *> vertices,vector<vector<size_t>> faceList);
+        dataSet(vector <Point> vertices,vector<vector<int>> faceList);
         ~dataSet();
         Mesh mesh;
         float surroundBox[6];
@@ -19,8 +18,7 @@ public:
         vector<float> vertices;
         void rotateModel(int x,int y,int z);
 private:
-        void constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList);
-        int getIndex(vector<vector<int> > index, int ID);
+        void constructMesh(vector <Point> vertices,vector<vector<int>> faceList);
         void getIndices();
 
 };

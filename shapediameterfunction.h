@@ -1,7 +1,6 @@
 ﻿#ifndef SHAPEDIAMETERFUNCTION
 #define SHAPEDIAMETERFUNCTION
 #include <vector>
-#include "point3f.h"
 #include "hashtable.h"
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>

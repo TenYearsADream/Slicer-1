@@ -137,7 +137,7 @@ void MyGLWidget::paintGL()
 
 void::MyGLWidget::paintSlice(int l)
 {
-    //cout<<intrpoints.size()<<endl;
+    //cout<<intrpoints[l].Points.empty()<<endl;
     vector<GLushort> sliceindices;
     vector<GLfloat> slicevertices;
     for(int i=0;i<intrpoints[l].Points.size();i++)

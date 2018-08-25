@@ -16,7 +16,6 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     myglwidget.cpp \
     mytablewidget.cpp \
-    point3f.cpp \
     readstlfile.cpp \
     shapediameterfunction.cpp \
     hashtable.cpp \
@@ -27,7 +26,6 @@ SOURCES += main.cpp\
 HEADERS  += mainwindow.h \
     myglwidget.h \
     mytablewidget.h \
-    point3f.h \
     readstlfile.h \
     shapediameterfunction.h \
     hashtable.h \

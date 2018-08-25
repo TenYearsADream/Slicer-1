@@ -101,12 +101,15 @@ MainWindow::MainWindow(QWidget *parent)
     layerLable->setText("layer:");
     layerSpinBox=new QSpinBox(cenWidget);
     layerSpinBox->setValue(0);
+    isAdapt = new QRadioButton();
+    isAdapt->setText("adapt slice");
     QWidget *layerQWidget=new QWidget(toolWidget);
     //layerQWidget->setStyleSheet("background-color:green;");
     QVBoxLayout *layerlayout = new QVBoxLayout();
     QHBoxLayout *layerlayout1 = new QHBoxLayout();
     layerlayout1->addWidget(sliceButton,0,Qt::AlignCenter);
     layerlayout1->addWidget(sliceSpinBox,0,Qt::AlignCenter);
+    layerlayout1->addWidget(isAdapt,0,Qt::AlignCenter);
     QHBoxLayout *layerlayout2 = new QHBoxLayout();
     layerlayout2->addWidget(layerLable);
     layerlayout2->addWidget(layerSlider);
@@ -171,15 +174,17 @@ void MainWindow::openFile()
 //        tableWidget->setData(readstl.hashtable->vertices,readstl.faceList);
 //        tableWidget->show();
 //        qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
-        time.start();
+        //readstl.hashtable->show();
         dataset=new dataSet(readstl.hashtable->vertices,readstl.faceList);
-        for(int i=0;i<6;i++)
-        {
-            dataset->surroundBox[i]=readstl.surroundBox[i];
-        }
+
+        qDebug()<<"time of construction of halfedge:"<<time.elapsed()/1000.0<<"s";
         qDebug()<<"number of vertices:"<<dataset->mesh.number_of_vertices();
         qDebug()<<"number of faces:"<<dataset->mesh.number_of_faces();
         qDebug()<<"number of normals:"<<readstl.normalList.size();
+        float x=dataset->surroundBox[1]-dataset->surroundBox[0];
+        float y=dataset->surroundBox[3]-dataset->surroundBox[2];
+        float z=dataset->surroundBox[5]-dataset->surroundBox[4];
+        qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
         opengl->xtrans=-(dataset->surroundBox[1]+dataset->surroundBox[0])/2.0;
         opengl->ytrans=(dataset->surroundBox[2]+dataset->surroundBox[3])/2.0;
         opengl->ztrans=1.0/(qMax(qAbs(dataset->surroundBox[4]),qAbs(dataset->surroundBox[5])));
@@ -189,7 +194,6 @@ void MainWindow::openFile()
         opengl->intrpoints.clear();      
         opengl->vertices=dataset->vertices;
         opengl->indices=dataset->indices;
-        qDebug()<<"time of OpenGl:"<<time.elapsed()/1000.0/1000.0<<"s";
         showMemoryInfo();
 
     } else {
@@ -226,12 +230,16 @@ void MainWindow::modelSlice()
     opengl->intrpoints.clear();
     layerSlider->setValue(1);
     slice.thick=sliceSpinBox->value();
+    slice.isAdapt=isAdapt->isChecked();
     if(!readstl.faceList.empty())
     {
         slice.mesh=dataset->mesh;
         slice.intrPoints(dataset->surroundBox[4],dataset->surroundBox[5]);
         opengl->intrpoints=slice.intrpoints;
-        cout<<"number of layers:"<<slice.layernumber<<endl;
+        if(slice.isAdapt)
+            cout<<"number of layers with adapt:"<<slice.layernumber<<endl;
+        else
+            cout<<"number of layers without adapt:"<<slice.layernumber<<endl;
         layerSlider->setRange(1,slice.layernumber);
         layerSpinBox->setRange(1,slice.layernumber);
 

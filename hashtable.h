@@ -1,22 +1,20 @@
 ﻿#ifndef HASHTABLE
 #define HASHTABLE
-#include "point3f.h"
 #include <vector>
+#include <QHash>
+#include <QString>
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
+typedef Kernel::Point_3 Point;
 using namespace std;
-struct tableNode{
-    long long ID;
-    Point3f point;
-    tableNode(const long long ID,Point3f &point):ID(ID),point(point){}
-};
-
 class HashTable{
 private:
-    int hash(long long ID);
+    QHash<QString,int> verticesmap;
 public:
-    size_t size;
-    vector <tableNode *> vertices;
+    int size;
+    vector <Point> vertices;
     HashTable();
-    size_t addPoint(long long ID,Point3f point);
+    int addPoint(string key,Point point);
     void show();
 };
 #endif // HASHTABLE

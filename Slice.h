@@ -36,15 +36,20 @@ public:
     ~Slice();
     Mesh mesh;
     vector<sliceData> intrpoints;
-    void intrPoints(double zmin,double zmax);
     double thick;
     int layernumber;
+    bool isAdapt;
+public:
+    void intrPoints(double zmin,double zmax);
 private:
     vector<intersectFace> intrsurfs;
+    vector<float>normalangle;
+    double adaptthick;
+private:
     void intrSurfs(double zheight);
     bool isIntr(CGAL::Halfedge_around_face_iterator<Mesh> e,double zheight);
     Point intersectPoint(CGAL::Halfedge_around_face_iterator<Mesh> e,double z);
-    bool isCoplanar(Mesh::Face_index f0,Mesh::Face_index f1);
+    float normalAngle(Mesh::Face_index f0);
     vector<vector<Point>> areaSort(vector<vector<Point>> points);
 };
 

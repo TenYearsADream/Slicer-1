@@ -1,9 +1,8 @@
 ﻿#include "dataset.h"
 #include <QMatrix4x4>
-typedef Mesh::Vertex_index vertex_descriptor;
 typedef Kernel::Point_3 Point;
 
-dataSet::dataSet(vector <tableNode *> points,vector<vector<size_t>> faceList)
+dataSet::dataSet(vector <Point> points,vector<vector<int>> faceList)
 {
     constructMesh(points,faceList);
     getIndices();
@@ -14,60 +13,47 @@ dataSet::~dataSet()
 
 }
 
-void dataSet::constructMesh(vector <tableNode *> vertices,vector<vector<size_t>> faceList)
+void dataSet::constructMesh(vector <Point> vertices,vector<vector<int>> faceList)
 {
     mesh.clear();
-    vector<vector<int>> index;
-    int j=0;
     for (int i=0;i<vertices.size();i++)
     {
-        tableNode *vertex = vertices[i];
-        if(vertex!=NULL)
-        {
-            vector<int> tmp(2);
-            tmp[0]=j;tmp[1]=i;
-            index.push_back(tmp);
-            vertex_descriptor v0=mesh.add_vertex(Point(vertex->point.x,vertex->point.y,vertex->point.z));
-            j++;
-        }
+        Mesh::Vertex_index v0=mesh.add_vertex(Point(vertices[i].x(),vertices[i].y(),vertices[i].z()));
     }
     //cout<<"number of vertices:"<<mesh.vertices().size()<<endl;
     for(int i=0;i<faceList.size();i++)
     {
-        vertex_descriptor vx(getIndex(index,(int)faceList[i][0]));
-        vertex_descriptor vy(getIndex(index,(int)faceList[i][1]));
-        vertex_descriptor vz(getIndex(index,(int)faceList[i][2]));
+        Mesh::Vertex_index vx(faceList[i][0]);
+        Mesh::Vertex_index vy(faceList[i][1]);
+        Mesh::Vertex_index vz(faceList[i][2]);
         //cout<<vx<<" "<<vy<<" "<<vz<<endl;
-        //mesh.add_edge(vx,vy);mesh.add_edge(vy,vz);mesh.add_edge(vz,vx);
         mesh.add_face(vx,vy,vz);
     }
     //cout<<"number of faces:"<<mesh.faces().size()<<endl;
-}
-
-int dataSet::getIndex(vector<vector<int> > index, int ID)
-{
-    for(int i=0;i<index.size();i++)
-    {
-        if(index[i][1]==ID)
-        {
-            return index[i][0];
-        }
-    }
-    return 0;
 }
 
 void dataSet::getIndices()
 {
     vertices.clear();
     indices.clear();
+    vector<float>X,Y,Z;
     for(size_t i=0;i<mesh.number_of_vertices();i++)
     {
         Mesh::Vertex_index v=Mesh::Vertex_index(Mesh::size_type(i));
         vertices.push_back((float)mesh.point(v).x());
         vertices.push_back((float)mesh.point(v).y());
         vertices.push_back((float)mesh.point(v).z());
+        X.push_back((float)mesh.point(v).x());
+        Y.push_back((float)mesh.point(v).y());
+        Z.push_back((float)mesh.point(v).z());
         //cout<<v<<":"<<mesh.point(v)<<endl;
     }
+    surroundBox[0]=*min_element(X.begin(),X.end());
+    surroundBox[1]=*max_element(X.begin(),X.end());
+    surroundBox[2]=*min_element(Y.begin(),Y.end());
+    surroundBox[3]=*max_element(Y.begin(),Y.end());
+    surroundBox[4]=*min_element(Z.begin(),Z.end());
+    surroundBox[5]=*max_element(Z.begin(),Z.end());
     for(size_t i=0;i<mesh.number_of_faces();i++)
     {
         Mesh::Face_index f=Mesh::Face_index(Mesh::size_type(i));
@@ -136,7 +122,6 @@ void dataSet::rotateModel(int x,int y,int z)
         Mesh::Vertex_index v2=Mesh::Vertex_index(Mesh::size_type(indices[i+2]));
         mesh.add_face(v0,v1,v2);
     }
-    //getIndices();
 }
 
 

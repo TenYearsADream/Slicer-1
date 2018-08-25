@@ -42,16 +42,15 @@ void MyTableWidget::slotItemClicked(QTableWidgetItem *item)
     //qDebug()<<"You clicked!"<<row<<endl;
 }
 
-void MyTableWidget::setData(vector <tableNode *> vertices, vector<vector<size_t>> faceList)
+void MyTableWidget::setData(vector <Point> vertices, vector<vector<size_t>> faceList)
 {
     for(int i=0; i<faceList.size(); i++)
     {
         for (int j=0;j<faceList[i].size();j++)
         {
-            tableNode *v = vertices[faceList[i][j]];
-            this->setItem(i,3*j+0, new QTableWidgetItem(QString::number(v->point.x,'f',2)));
-            this->setItem(i,3*j+1, new QTableWidgetItem(QString::number(v->point.y,'f',2)));
-            this->setItem(i,3*j+2, new QTableWidgetItem(QString::number(v->point.z,'f',2)));
+            this->setItem(i,3*j+0, new QTableWidgetItem(QString::number(vertices[i].x(),'f',2)));
+            this->setItem(i,3*j+1, new QTableWidgetItem(QString::number(vertices[i].y(),'f',2)));
+            this->setItem(i,3*j+2, new QTableWidgetItem(QString::number(vertices[i].z(),'f',2)));
         }
 
     }
