@@ -101,25 +101,30 @@ MainWindow::MainWindow(QWidget *parent)
     layerLable->setText("layer:");
     layerSpinBox=new QSpinBox(cenWidget);
     layerSpinBox->setValue(0);
-    isAdapt = new QRadioButton();
+    isAdapt = new QCheckBox();
     isAdapt->setText("adapt slice");
+    isParaComp = new QCheckBox();
+    isParaComp->setText("Parallel computing");
     QWidget *layerQWidget=new QWidget(toolWidget);
     //layerQWidget->setStyleSheet("background-color:green;");
     QVBoxLayout *layerlayout = new QVBoxLayout();
     QHBoxLayout *layerlayout1 = new QHBoxLayout();
     layerlayout1->addWidget(sliceButton,0,Qt::AlignCenter);
     layerlayout1->addWidget(sliceSpinBox,0,Qt::AlignCenter);
-    layerlayout1->addWidget(isAdapt,0,Qt::AlignCenter);
     QHBoxLayout *layerlayout2 = new QHBoxLayout();
-    layerlayout2->addWidget(layerLable);
-    layerlayout2->addWidget(layerSlider);
-    layerlayout2->addWidget(layerSpinBox);
+    layerlayout2->addWidget(isAdapt,0,Qt::AlignCenter);
+    layerlayout2->addWidget(isParaComp,0,Qt::AlignCenter);
+    QHBoxLayout *layerlayout3 = new QHBoxLayout();
+    layerlayout3->addWidget(layerLable);
+    layerlayout3->addWidget(layerSlider);
+    layerlayout3->addWidget(layerSpinBox);
     QObject::connect(layerSpinBox,SIGNAL(valueChanged(int)),layerSlider,SLOT(setValue(int))); //将spinBox的数值传向slider信号槽
     QObject::connect(layerSlider,SIGNAL(valueChanged(int)),layerSpinBox,SLOT(setValue(int)));//将slider的数值传向spinBox信号槽
     QObject::connect(layerSlider,SIGNAL(valueChanged(int)),opengl,SLOT(setLayer(int)));
     layerQWidget->setLayout(layerlayout);
     layerlayout->addLayout(layerlayout1);
     layerlayout->addLayout(layerlayout2);
+    layerlayout->addLayout(layerlayout3);
     toollayout->addWidget(layerQWidget);
     toollayout->setStretchFactor(layerQWidget,4);
 
@@ -139,7 +144,6 @@ MainWindow::MainWindow(QWidget *parent)
     toollayout->setStretchFactor(segmentQWidget,2);
 
     setStatusTip(tr("ready"));
-
 }
 
 MainWindow::~MainWindow()
@@ -147,33 +151,32 @@ MainWindow::~MainWindow()
 
 }
 
-void MainWindow::showMemoryInfo()
-{
-    HANDLE handle=GetCurrentProcess();
-    PROCESS_MEMORY_COUNTERS pmc;
-    GetProcessMemoryInfo(handle,&pmc,sizeof(pmc));
-    qDebug()<<"using memory:"<<pmc.WorkingSetSize/1000000<<"MB"<<endl;
-}
+//void MainWindow::showMemoryInfo()
+//{
+//    HANDLE handle=GetCurrentProcess();
+//    PROCESS_MEMORY_COUNTERS pmc;
+//    GetProcessMemoryInfo(handle,&pmc,sizeof(pmc));
+//    qDebug()<<"using memory:"<<pmc.WorkingSetSize/1000000<<"MB"<<endl;
+//}
 
 void MainWindow::openFile()
 {
     QString path = QFileDialog::getOpenFileName(this,
                                                 tr("Open File"),
                                                 ".",
-                                               tr("Text Files(*.stl)"));
-    const char* filepath=path.toStdString().c_str();//QString转化为string类型，然后由string转化char*
+                                               tr("Text Files(*.stl)"));    
     if(!path.isEmpty()) {
         QTime time;
         time.start();
-        readstl.ReadStlFile(filepath);
+        if(!readstl.ReadStlFile(path))
+        {
+            cout<<'读取stl文件失败!'<<endl;
+            return;
+        }
         qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";
         //qDebug()<<"number of faces:"<<readstl->NumTri()<<endl;
         //qDebug()<<readstl.surroundBox[1]<<endl;
         time.start();
-//        tableWidget->setRowCount(readstl.NumTri());
-//        tableWidget->setData(readstl.hashtable->vertices,readstl.faceList);
-//        tableWidget->show();
-//        qDebug()<<"time of table:"<<time.elapsed()/1000.0<<"s";
         //readstl.hashtable->show();
         dataset=new dataSet(readstl.hashtable->vertices,readstl.faceList);
 
@@ -194,7 +197,7 @@ void MainWindow::openFile()
         opengl->intrpoints.clear();      
         opengl->vertices=dataset->vertices;
         opengl->indices=dataset->indices;
-        showMemoryInfo();
+        //showMemoryInfo();
 
     } else {
         QMessageBox::warning(this, tr("Path"),
@@ -225,16 +228,22 @@ void MainWindow::modelSegment()
 
 void MainWindow::modelSlice()
 {
+    QTime time;
     Slice slice;
     opengl->clusterTable.clear();
     opengl->intrpoints.clear();
     layerSlider->setValue(1);
     slice.thick=sliceSpinBox->value();
     slice.isAdapt=isAdapt->isChecked();
+    slice.isParaComp=isParaComp->isChecked();
     if(!readstl.faceList.empty())
     {
-        slice.mesh=dataset->mesh;
-        slice.intrPoints(dataset->surroundBox[4],dataset->surroundBox[5]);
+        time.start();
+        slice.startSlice(dataset->mesh,dataset->surroundBox[4],dataset->surroundBox[5]);
+        if(slice.isParaComp)
+            cout<<"time of parallel computing:"<<time.elapsed()<<"ms"<<endl;
+        else
+            cout<<"time of cpu computing:"<<time.elapsed()<<"ms"<<endl;
         opengl->intrpoints=slice.intrpoints;
         if(slice.isAdapt)
             cout<<"number of layers with adapt:"<<slice.layernumber<<endl;

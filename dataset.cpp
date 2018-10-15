@@ -61,7 +61,7 @@ void dataSet::getIndices()
         CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
         for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(f), mesh);vbegin != vend;++vbegin)\
         {
-            indices.push_back(unsigned short(*vbegin));
+            indices.push_back((unsigned short)(*vbegin));
             //cout<<unsigned short(*vbegin)<<" ";
         }
         //cout<<endl;

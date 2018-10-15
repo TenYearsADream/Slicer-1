@@ -58,7 +58,7 @@ vector<vector<int>> HierarchicalClustering::Cluster(vector<vector<double> > data
     do{
         //Merge two closest clusters
         int mi,mj;
-        float minDt =FLT_MAX;
+        float minDt =std::numeric_limits<float>::max();
         maxDt=0;
         //寻找最小距离的两个点i和j
         for(int i=0;i<dTable.size();i++){

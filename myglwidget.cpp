@@ -9,7 +9,6 @@
 #include <QPushButton>
 #include <QOpenGLShader>
 #include <QOpenGLShaderProgram>
-#include <glm/gtc/type_ptr.hpp>
 using namespace std;
 static GLdouble colorMap[][3]={
     {0.7,0.7,0.7},
@@ -103,7 +102,8 @@ void MyGLWidget::resizeGL(int width, int height)
     }
     glViewport(0, 0, width, height);    // Reset The Current Viewport
     projection.setToIdentity();
-    projection.perspective(45.0f, (GLfloat)width/(GLfloat)height, 0.001f,1000.0f);
+    projection.perspective(30.0f, (GLfloat)width/(GLfloat)height, 0.001f,1000.0f);
+    //projection.ortho(-100.0,100.0,-100.0/((GLfloat)width/(GLfloat)height),100.0/((GLfloat)width/(GLfloat)height),0.01,1000.0);
 }
 
 
@@ -123,7 +123,8 @@ void MyGLWidget::paintGL()
             sliceProgram->setUniformValue("NormalMatrix", mv.normalMatrix());
             sliceProgram->setUniformValue("MVP", projection * mv);
             sliceProgram->bind();
-            paintSlice(layer);
+            //for(int i=0;i<layer;i++)
+                paintSlice(layer);
         }
     }
     else{
@@ -281,6 +282,7 @@ void MyGLWidget::mouseMoveEvent(QMouseEvent *event)
         // vector
         QVector3D rotationAxis = QVector3D(diff.y(), diff.x(), 0.0).normalized();
         rotation = QQuaternion::fromAxisAndAngle(rotationAxis, angle) * rotation;
+        //rotation = QQuaternion::fromAxisAndAngle(QVector3D(1.0f,0.0f,0.0f), 90) * rotation;
         mousePos = newPos;
         this->update();
     }

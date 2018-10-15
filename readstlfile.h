@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include<vector>
+#include <QString>
 #include "hashtable.h"
 using namespace std;
 class ReadSTLFile
 {
 public:
-    bool ReadStlFile(const char *cfilename);
+    bool ReadStlFile(const QString filename);
     int NumTri();
     vector<Point> normalList;
     vector<vector<int>> faceList;

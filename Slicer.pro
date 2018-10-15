@@ -15,7 +15,6 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     myglwidget.cpp \
-    mytablewidget.cpp \
     readstlfile.cpp \
     shapediameterfunction.cpp \
     hashtable.cpp \
@@ -25,7 +24,6 @@ SOURCES += main.cpp\
 
 HEADERS  += mainwindow.h \
     myglwidget.h \
-    mytablewidget.h \
     readstlfile.h \
     shapediameterfunction.h \
     hashtable.h \
@@ -44,41 +42,20 @@ windows {
      DEFINES *= Q_COMPILER_INITIALIZER_LISTS
 }
 
-INCLUDEPATH += E:/ProgramFiles/boost_1_59_0 \
-               E:/ProgramFiles/CGAL/include \
-               E:/ProgramFiles/CGAL/auxiliary/gmp/include \
-               E:/ProgramFiles/CGAL/build/include \
-               E:/Program Files/VS2013/VC/include \
+INCLUDEPATH += D:/Qt/CGAL-4.11/include
+INCLUDEPATH += D:/Qt/CGAL-4.11/auxiliary/gmp/include
+INCLUDEPATH += D:/Qt/CGAL/include
+INCLUDEPATH += D:/Qt/boost_1_59_0
 
-INCLUDEPATH += $$PWD/bin
-DEPENDPATH += $$PWD/bin
-LIBS += -L$$PWD/bin/ -llibmpfr-4
-LIBS += -L$$PWD/bin/ -llibgmp-10
+win32: LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL.dll
+win32: LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_ImageIO.dll
+win32: LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Core.dll
+win32: LIBS += -LD:/Qt/CGAL-4.11/auxiliary/gmp/lib/ -llibgmp-10
 
-INCLUDEPATH += $$PWD/bin
-DEPENDPATH += $$PWD/bin
+QMAKE_CXXFLAGS += -Wno-unused-parameter
+QMAKE_CXXFLAGS += -Wno-unused-variable
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_Core-vc120-mt-4.11
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_Core-vc120-mt-gd-4.11.lib
+win32: LIBS += -L'C:/Program Files (x86)/AMD APP/lib/x86/' -lOpenCL
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_ImageIO-vc120-mt-4.11
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_ImageIO-vc120-mt-gd-4.11
-
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_Qt5-vc120-mt-4.11
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lCGAL_Qt5-vc120-mt-gd-4.11
-
-
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lCGAL-vc120-mt-4.11
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lCGAL-vc120-mt-gd-4.11
-
-
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-1_59
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -llibboost_thread-vc120-mt-gd-1_59
-
-
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-1_59
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -llibboost_system-vc120-mt-gd-1_59
-
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/bin/ -lboost_system-vc120-mt-1_59
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/bin/ -lboost_system-vc120-mt-1_59d
-
+INCLUDEPATH += 'C:/Program Files (x86)/AMD APP/include'
+DEPENDPATH += 'C:/Program Files (x86)/AMD APP/include'

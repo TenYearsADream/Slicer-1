@@ -14,7 +14,7 @@ public:
     int size;
     vector <Point> vertices;
     HashTable();
-    int addPoint(string key,Point point);
+    int addPoint(QString key,Point point);
     void show();
 };
 #endif // HASHTABLE

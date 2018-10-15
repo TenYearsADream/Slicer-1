@@ -9,9 +9,9 @@ HashTable::HashTable(){
     size=0;
 }
 
-int HashTable::addPoint(string key,Point point){
+int HashTable::addPoint(QString key,Point point){
     int index;
-    auto it = verticesmap.find(QString::fromStdString(key));
+    auto it = verticesmap.find(key);
     if(it != verticesmap.end())
     {
         index=it.value();
@@ -20,7 +20,7 @@ int HashTable::addPoint(string key,Point point){
     else
     {
         vertices.push_back(point);
-        verticesmap.insert(QString::fromStdString(key),size);
+        verticesmap.insert(key,size);
         index=size;
         size++;
     }
