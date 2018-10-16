@@ -1,22 +1,29 @@
-﻿#pragma once
-#include<vector>
+﻿#include<vector>
 #include <QString>
-#include "hashtable.h"
+#include <QHash>
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <dataset.h>
+typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
+typedef Kernel::Point_3 Point;
 using namespace std;
 class ReadSTLFile
 {
 public:
-    bool ReadStlFile(const QString filename);
-    int NumTri();
+    unsigned int numberTriangles;
+    int numberVertices;
     vector<Point> normalList;
-    vector<vector<int>> faceList;
-    HashTable *hashtable;
+    dataSet dataset;
+public:
+    bool ReadStlFile(const QString filename);
 private:
-    unsigned int unTriangles;
+    QHash<QString,int> verticesmap;
+    char* memwriter;
+
+private:
     bool ReadASCII(const char *cfilename);
     bool ReadBinary(const char *cfilename);
+    int addPoint(QString key,Point point);
 
-    char* memwriter;
     int cpyint(const char*& p);
     float cpyfloat(const char*& p);
 };

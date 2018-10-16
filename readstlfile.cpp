@@ -15,28 +15,25 @@ bool ReadSTLFile::ReadStlFile(const QString filename)
     char* buffer;
     buffer=(char *) malloc(file.size());
 
-
     if(file.open(QIODevice::ReadOnly))
     {
         file.read(buffer,file.size());
     }
 
-    ios::sync_with_stdio(false);
     if (buffer[0]=='s')//判断格式
     {
-        std::cout<<"File is ASCII"<<endl;
+        qDebug()<<"File is ASCII"<<endl;
         vector<Point>().swap(normalList);//清空vector
-        vector<vector<int>>().swap(faceList);
+        dataset.mesh.clear();
         ReadASCII(buffer);
     }
     else
     {
-        std::cout<<"Binary文件"<<endl;
+        qDebug()<<"File is Binary"<<endl;
         vector<Point>().swap(normalList);
-        vector<vector<int>>().swap(faceList);
+        dataset.mesh.clear();
         ReadBinary(buffer);
     }
-    ios::sync_with_stdio(true);
     file.close();
     free(buffer);//释放内存
     return true;
@@ -44,11 +41,11 @@ bool ReadSTLFile::ReadStlFile(const QString filename)
 
 bool ReadSTLFile::ReadASCII(const char *buffer)
 {
-    unTriangles = 0;
+    numberVertices=0;
+    numberTriangles = 0;
     float x, y, z;
     int index;
     vector<int> point(3);
-    hashtable = new HashTable;
     string name, useless;
     stringstream ss(buffer);
     getline(ss, name);//文件路径及文件名
@@ -66,24 +63,29 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
         {
             ss >> useless >> x >> y >> z;
             //cout<<x<<" "<<y<<" "<<z<<endl;
-            QString strx = QString::number(sqrt(qAbs(x)), 'f', 3);
-            QString stry = QString::number(sqrt(qAbs(y)), 'f', 3);
-            QString strz = QString::number(sqrt(qAbs(z)), 'f', 3);
+            QString strx = QString::number(sqrt(qAbs(x)), 'f', 8);
+            QString stry = QString::number(sqrt(qAbs(y)), 'f', 8);
+            QString strz = QString::number(sqrt(qAbs(z)), 'f', 8);
+            //qDebug()<<strx<<" "<<stry<<" "<<strz;
             strx=strx.replace(".","");
             stry=stry.replace(".","");
             strz=strz.replace(".","");
-            if(x>0)strx="1"+strx.left(3);
-            else   strx="0"+strx.left(3);
-            if(y>0)stry="1"+stry.left(3);
-            else   stry="0"+stry.left(3);
-            if(z>0)strz="1"+strz.left(3);
-            else   strz="0"+strz.left(3);
+            if(x>0)strx="1"+strx.left(8);
+            else   strx="0"+strx.left(8);
+            if(y>0)stry="1"+stry.left(8);
+            else   stry="0"+stry.left(8);
+            if(z>0)strz="1"+strz.left(8);
+            else   strz="0"+strz.left(8);
             QString key="1"+strx+stry+strz;
-            index=hashtable->addPoint(key,Point(x,y,z));
+            index=addPoint(key,Point(x,y,z));
             point[i]=index;
         }
-        faceList.push_back(point);
-        unTriangles++;
+        Mesh::Vertex_index vx(point[0]);
+        Mesh::Vertex_index vy(point[1]);
+        Mesh::Vertex_index vz(point[2]);
+        dataset.mesh.add_face(vx,vy,vz);
+
+        numberTriangles++;
         getline(ss, useless);//空行
         getline(ss, useless);//end loop
         getline(ss, useless);//end facet
@@ -94,50 +96,46 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
 bool ReadSTLFile::ReadBinary(const char *buffer)
 {
     const char* p = buffer;
-    float x,y,z;
-    int index;
+    float x=0,y=0,z=0;
+    int index=0;
     char* name;
     vector<int> point(3);
-    hashtable = new HashTable;
     memcpy(name, p, 80);//80字节文件头
-    //cout<<name<<endl;
+    //qDebug()<<name<<endl;
     p += 80;
-    unTriangles= cpyint(p);//4字节三角面片个数
-    //读取其他面片
-    for (unsigned int i = 0; i < unTriangles; i++)
+    numberVertices=0;
+    numberTriangles= cpyint(p);//4字节三角面片个数
+    //读取三角形面片
+    for (unsigned int i = 0; i < numberTriangles; i++)
     {
         normalList.push_back(Point(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
         for (int j = 0; j < 3; j++)//读取三顶点
         {
             x=cpyfloat(p);y=cpyfloat(p);z=cpyfloat(p);
-            QString strx = QString::number(sqrt(qAbs(x)), 'f', 3);
-            QString stry = QString::number(sqrt(qAbs(y)), 'f', 3);
-            QString strz = QString::number(sqrt(qAbs(z)), 'f', 3);
+            QString strx = QString::number(sqrt(qAbs(x)), 'f', 8);
+            QString stry = QString::number(sqrt(qAbs(y)), 'f', 8);
+            QString strz = QString::number(sqrt(qAbs(z)), 'f', 8);
             strx=strx.replace(".","");
             stry=stry.replace(".","");
             strz=strz.replace(".","");
-            if(x>0)strx="1"+strx.left(3);
-            else   strx="0"+strx.left(3);
-            if(y>0)stry="1"+stry.left(3);
-            else   stry="0"+stry.left(3);
-            if(z>0)strz="1"+strz.left(3);
-            else   strz="0"+strz.left(3);
+            if(x>0)strx="1"+strx.left(8);
+            else   strx="0"+strx.left(8);
+            if(y>0)stry="1"+stry.left(8);
+            else   stry="0"+stry.left(8);
+            if(z>0)strz="1"+strz.left(8);
+            else   strz="0"+strz.left(6);
             QString key="1"+strx+stry+strz;
-            index=hashtable->addPoint(key,Point(x,y,z));
+            index=addPoint(key,Point(x,y,z));
             point[j]=index;
         }
-        faceList.push_back(point);
+        Mesh::Vertex_index vx(point[0]);
+        Mesh::Vertex_index vy(point[1]);
+        Mesh::Vertex_index vz(point[2]);
+        dataset.mesh.add_face(vx,vy,vz);
         p += 2;//跳过尾部标志
     }
     return true;
 }
-
-int ReadSTLFile::NumTri()
-{
-    return unTriangles;
-    cout<<unTriangles<<endl;
-}
-
 
 int ReadSTLFile::cpyint(const char*& p)
 {
@@ -147,6 +145,7 @@ int ReadSTLFile::cpyint(const char*& p)
     p += 4;
     return cpy;
 }
+
 float ReadSTLFile::cpyfloat(const char*& p)
 {
     float cpy;
@@ -154,4 +153,22 @@ float ReadSTLFile::cpyfloat(const char*& p)
     memcpy(memwriter, p, 4);
         p += 4;
     return cpy;
+}
+
+int ReadSTLFile::addPoint(QString key,Point point){
+    int index;
+    auto it = verticesmap.find(key);
+    if(it != verticesmap.end())
+    {
+        index=it.value();
+        //cout<<"索引："<<it.value()<<endl;
+    }
+    else
+    {
+        Mesh::Vertex_index v0=dataset.mesh.add_vertex(point);
+        verticesmap.insert(key,numberVertices);
+        index=numberVertices;
+        numberVertices++;
+    }
+    return index;
 }

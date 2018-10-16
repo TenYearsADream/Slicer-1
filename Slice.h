@@ -1,11 +1,10 @@
 ﻿#ifndef SLICE_H
 #define SLICE_H
 #include <vector>
-#include "hashtable.h"
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
 #include <CL/cl.h>
-
+using namespace std;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
 typedef Kernel::Point_3 Point;

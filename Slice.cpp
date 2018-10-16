@@ -95,7 +95,7 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
         if(intredges.size()>0)
         {
             int lineNum = intredges.size();
-            //cout<<"The number of intersection line:"<<BUFSIZE<<endl;
+            //cout<<"The number of intersection line:"<<lineNum<<endl;
 
             if(!isParaComp)
             {

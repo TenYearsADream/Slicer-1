@@ -2,10 +2,9 @@
 #include <QMatrix4x4>
 typedef Kernel::Point_3 Point;
 
-dataSet::dataSet(vector <Point> points,vector<vector<int>> faceList)
+dataSet::dataSet()
 {
-    constructMesh(points,faceList);
-    getIndices();
+    mesh.clear();
 }
 
 dataSet::~dataSet()
@@ -29,7 +28,7 @@ void dataSet::constructMesh(vector <Point> vertices,vector<vector<int>> faceList
         //cout<<vx<<" "<<vy<<" "<<vz<<endl;
         mesh.add_face(vx,vy,vz);
     }
-    //cout<<"number of faces:"<<mesh.faces().size()<<endl;
+    //qDebug()<<"number of faces:"<<mesh.faces().size()<<endl;
 }
 
 void dataSet::getIndices()

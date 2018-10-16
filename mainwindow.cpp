@@ -24,8 +24,7 @@
 #include "Slice.h"
 using namespace std;
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
 {
     setWindowTitle(tr("Slicer"));
     setMinimumSize(1000,640);
@@ -170,33 +169,30 @@ void MainWindow::openFile()
         time.start();
         if(!readstl.ReadStlFile(path))
         {
-            cout<<'读取stl文件失败!'<<endl;
+            cout<<"读取stl文件失败!"<<endl;
             return;
         }
         qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";
-        //qDebug()<<"number of faces:"<<readstl->NumTri()<<endl;
-        //qDebug()<<readstl.surroundBox[1]<<endl;
         time.start();
-        //readstl.hashtable->show();
-        dataset=new dataSet(readstl.hashtable->vertices,readstl.faceList);
-
-        qDebug()<<"time of construction of halfedge:"<<time.elapsed()/1000.0<<"s";
-        qDebug()<<"number of vertices:"<<dataset->mesh.number_of_vertices();
-        qDebug()<<"number of faces:"<<dataset->mesh.number_of_faces();
+        dataset.mesh.clear();
+        dataset=readstl.dataset;
+        dataset.getIndices();
+        qDebug()<<"number of vertices:"<<dataset.mesh.number_of_vertices();
+        qDebug()<<"number of faces:"<<dataset.mesh.number_of_faces();
         qDebug()<<"number of normals:"<<readstl.normalList.size();
-        float x=dataset->surroundBox[1]-dataset->surroundBox[0];
-        float y=dataset->surroundBox[3]-dataset->surroundBox[2];
-        float z=dataset->surroundBox[5]-dataset->surroundBox[4];
+        float x=dataset.surroundBox[1]-dataset.surroundBox[0];
+        float y=dataset.surroundBox[3]-dataset.surroundBox[2];
+        float z=dataset.surroundBox[5]-dataset.surroundBox[4];
         qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
-        opengl->xtrans=-(dataset->surroundBox[1]+dataset->surroundBox[0])/2.0;
-        opengl->ytrans=(dataset->surroundBox[2]+dataset->surroundBox[3])/2.0;
-        opengl->ztrans=1.0/(qMax(qAbs(dataset->surroundBox[4]),qAbs(dataset->surroundBox[5])));
+        opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0;
+        opengl->ytrans=(dataset.surroundBox[2]+dataset.surroundBox[3])/2.0;
+        opengl->ztrans=1.0/(qMax(qAbs(dataset.surroundBox[4]),qAbs(dataset.surroundBox[5])));
         opengl->clusterTable.clear();
         opengl->vertices.clear();
         opengl->indices.clear();
-        opengl->intrpoints.clear();      
-        opengl->vertices=dataset->vertices;
-        opengl->indices=dataset->indices;
+        opengl->intrpoints.clear();
+        opengl->vertices=dataset.vertices;
+        opengl->indices=dataset.indices;
         //showMemoryInfo();
 
     } else {
@@ -210,9 +206,9 @@ void MainWindow::modelSegment()
     opengl->intrpoints.clear();
     HierarchicalClustering hierarchicalclustering;
     double esp=segSpinBox->value();
-    if(!readstl.faceList.empty())
+    if(!dataset.mesh.is_empty())
     {
-        vector<vector<double>> charValue=shapediameterfunction->calculateSDF(dataset->mesh);
+        vector<vector<double>> charValue=shapediameterfunction->calculateSDF(dataset.mesh);
 //        for(int i=0;i<charValue.size();i++)
 //        {
 //            cout<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
@@ -236,10 +232,10 @@ void MainWindow::modelSlice()
     slice.thick=sliceSpinBox->value();
     slice.isAdapt=isAdapt->isChecked();
     slice.isParaComp=isParaComp->isChecked();
-    if(!readstl.faceList.empty())
+    if(!dataset.mesh.is_empty())
     {
         time.start();
-        slice.startSlice(dataset->mesh,dataset->surroundBox[4],dataset->surroundBox[5]);
+        slice.startSlice(dataset.mesh,dataset.surroundBox[4],dataset.surroundBox[5]);
         if(slice.isParaComp)
             cout<<"time of parallel computing:"<<time.elapsed()<<"ms"<<endl;
         else
@@ -265,14 +261,14 @@ void MainWindow::modelPlace()
     int x=placeSpinBoxx->value();
     int y=placeSpinBoxy->value();
     int z=placeSpinBoxz->value();
-    if(!readstl.faceList.empty())
+    if(!dataset.mesh.is_empty())
     {
-        dataset->rotateModel(x,y,z);
-        opengl->xtrans=-(dataset->surroundBox[1]+dataset->surroundBox[0])/2.0;
-        opengl->ytrans=(dataset->surroundBox[2]+dataset->surroundBox[3])/2.0;
-        opengl->ztrans=1.0/(qMax(qAbs(dataset->surroundBox[4]),qAbs(dataset->surroundBox[5])));
-        opengl->vertices=dataset->vertices;
-        opengl->indices=dataset->indices;
+        dataset.rotateModel(x,y,z);
+        opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0;
+        opengl->ytrans=(dataset.surroundBox[2]+dataset.surroundBox[3])/2.0;
+        opengl->ztrans=1.0/(qMax(qAbs(dataset.surroundBox[4]),qAbs(dataset.surroundBox[5])));
+        opengl->vertices=dataset.vertices;
+        opengl->indices=dataset.indices;
 
     } else {
         QMessageBox::warning(this, tr("error"),

@@ -17,7 +17,6 @@ SOURCES += main.cpp\
     myglwidget.cpp \
     readstlfile.cpp \
     shapediameterfunction.cpp \
-    hashtable.cpp \
     hierarchicalclustering.cpp \
     Slice.cpp \
     dataset.cpp
@@ -26,7 +25,6 @@ HEADERS  += mainwindow.h \
     myglwidget.h \
     readstlfile.h \
     shapediameterfunction.h \
-    hashtable.h \
     hierarchicalclustering.h \
     Slice.h \
     dataset.h

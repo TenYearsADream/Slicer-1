@@ -10,7 +10,6 @@
 #include <QSpinBox>
 #include <QCheckBox>
 #include "myglwidget.h"
-#include "mytablewidget.h"
 #include "readstlfile.h"
 #include "shapediameterfunction.h"
 #include "dataset.h"
@@ -25,20 +24,18 @@ public:
     ~MainWindow();
     int nFaceCount=0;
     void showMemoryInfo();
-    ReadSTLFile readstl;
+    dataSet dataset;
 private slots:
     void modelSegment();
     void modelSlice();
     void modelPlace();
-private:
     void openFile();
+private:
     QAction *openAction;
+    ReadSTLFile readstl;
     MyGLWidget *opengl;
-    MyTableWidget *tableWidget;
     ShapeDiameterFunction *shapediameterfunction;
-    dataSet *dataset;
-    bool ReadASCII(uchar *buffer);
-    bool ReadBinary(uchar *buffer);
+
     QDoubleSpinBox *segSpinBox,*sliceSpinBox;
     QSlider *layerSlider ;
     QSpinBox *layerSpinBox;
