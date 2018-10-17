@@ -19,9 +19,6 @@ public:
         vector<float> vertices;
         void rotateModel(int x,int y,int z);
         void getIndices();
-private:
-        void constructMesh(vector <Point> vertices,vector<vector<int>> faceList);
-
 
 };
 

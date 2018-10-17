@@ -147,7 +147,9 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
 
 MainWindow::~MainWindow()
 {
-
+    delete(openAction);
+    delete(opengl);
+    delete(shapediameterfunction);
 }
 
 //void MainWindow::showMemoryInfo()
@@ -173,7 +175,6 @@ void MainWindow::openFile()
             return;
         }
         qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";
-        time.start();
         dataset.mesh.clear();
         dataset=readstl.dataset;
         dataset.getIndices();

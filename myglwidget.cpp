@@ -5,7 +5,7 @@
 #include <iostream>
 #include <string.h>
 #include <QKeyEvent>
-#include <gl/GLU.h>
+//#include <gl/GLU.h>
 #include <QPushButton>
 #include <QOpenGLShader>
 #include <QOpenGLShaderProgram>

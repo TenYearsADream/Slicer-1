@@ -7,10 +7,11 @@
 #include <QTime>
 #include <QDebug>
 #include <windows.h>
+#include <QProgressDialog>
+#include <QMessageBox>
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
-typedef Mesh::Vertex_index vertex_descriptor;
-typedef boost::graph_traits<Mesh>::face_descriptor face_descriptor;
+//typedef boost::graph_traits<Mesh>::face_descriptor face_descriptor;
 typedef Kernel::Point_3 Point;
 using namespace std;
 Slice::Slice()
@@ -28,70 +29,82 @@ Slice::~Slice()
     clReleaseProgram(program);
     clReleaseContext(context);
     clReleaseKernel(cap);
+    delete(interSection1);
+    delete(interSection2);
 }
 
 void Slice::intrSurfs(Mesh mesh)
 {
-    vector<intersectFace>().swap(intrsurfs);
+    vector<intersectFace>().swap(parallfaces);
     vector<float>().swap(normalangle);
+    bool created;
+    boost::tie(isSliced,created)=mesh.add_property_map<Mesh::face_index,bool>("f:isSliced");
     for(Mesh::Face_iterator f=mesh.faces_begin();f!=mesh.faces_end();f++)
     {
-        CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
-        vector<double>height;
-        for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(*f), mesh);vbegin != vend;++vbegin)\
+        if(!isSliced[*f])
         {
-            height.push_back(mesh.point(*vbegin).z());
-        }
-        double zmin=*min_element(height.begin(),height.end());
-        double zmax=*max_element(height.begin(),height.end());
-        //cout<<zmin<<" "<<zmax<<" "<<zheight<<endl;
-        if((zheight-zmin)>1e-4 && (zmax-zheight)>1e-4)
-        {
-            float cos=normalAngle(mesh,*f);
-            normalangle.push_back(sqrt(1-cos*cos));
-            intrsurfs.push_back(intersectFace(*f,false,false));
-        }
-        else if((qAbs(zheight-zmin)<=1e-4) && (qAbs(zheight-zmax)<=1e-4))
-        {
-            float cos=normalAngle(mesh,*f);
-            normalangle.push_back(sqrt(1-cos*cos));
-            intrsurfs.push_back(intersectFace(*f,false,true));
+            CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
+            vector<double>height;
+            for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(*f), mesh);vbegin != vend;++vbegin)\
+            {
+                height.push_back(mesh.point(*vbegin).z());
+            }
+            double zmin=*min_element(height.begin(),height.end());
+            double zmax=*max_element(height.begin(),height.end());
+            //cout<<zmin<<" "<<zmax<<" "<<zheight<<endl;
+            if((zheight-zmin)>1e-4 && (zmax-zheight)>1e-4)
+            {
+                float cos=normalAngle(mesh,*f);
+                normalangle.push_back(sqrt(1-cos*cos));
+                findEdge(mesh,*f);
+            }
+            else if((qAbs(zheight-zmin)<=1e-4) && (qAbs(zheight-zmax)<=1e-4))
+            {
+                float cos=normalAngle(mesh,*f);
+                normalangle.push_back(sqrt(1-cos*cos));
+                parallfaces.push_back(intersectFace(*f,false));
+            }
         }
     }
+    mesh.remove_property_map(isSliced);
     //cout<<"number of intrsurfs:"<<intrsurfs.size()<<endl;
 }
 
 void Slice::startSlice(Mesh mesh,double zmin,double zmax)
 {
 
+    QProgressDialog *progressDlg=new QProgressDialog();
+    progressDlg->setWindowModality(Qt::WindowModal);
+    progressDlg->setMinimumDuration(0);
+    progressDlg->setAttribute(Qt::WA_DeleteOnClose, true);
+    progressDlg->setWindowTitle("切片");
+    progressDlg->setLabelText("正在切片......");
+    progressDlg->setRange(zmin,zmax);
     zheight=zmin;
-    while(zheight<=zmax)
-    {       
+    while(zheight<zmax)
+    {
+        progressDlg->setValue(zheight);
+        if(progressDlg->wasCanceled())
+        {
+            layernumber=0;
+            vector<sliceData>().swap(intrpoints);
+            QMessageBox::warning(NULL,QStringLiteral("提示"),QStringLiteral("取消切片"));
+            return;
+        }
         vector<vector<Point>>().swap(points);
         vector<Mesh::halfedge_index>().swap(intredges);
         vector<int>().swap(loopNum);
         //cout<<"layer of "<<layernumber+1<<":"<<endl;
         intrSurfs(mesh);
-        //寻找相交线集合
-        for(uint i=0;i<intrsurfs.size();i++)
+        for(uint i=0;i<parallfaces.size();i++)
         {
-            Mesh::Face_index fbegin=intrsurfs[i].Faceindex;
-            if(!intrsurfs[i].isSliced)
+            Mesh::Face_index fbegin=parallfaces[i].Faceindex;
+            if(!parallfaces[i].isSliced)
             {
-                //cout<<"face:"<<fbegin<<endl;
-                if(intrsurfs[i].isParallel)
-                {
-                    //cout<<"parallelled!"<<endl;
-                    parallelPoint(mesh,fbegin);
-                }
-                else
-                {
-                    //cout<<"isnot parallel!"<<endl;
-                    findEdge(mesh,fbegin);
-                }
+                //cout<<"parallelled!"<<endl;
+                parallelPoint(mesh,fbegin);
             }
         }
-
         if(intredges.size()>0)
         {
             int lineNum = intredges.size();
@@ -167,6 +180,7 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
         else
             zheight += thick;
     }
+    progressDlg->close();
 }
 
 bool Slice::isIntr(Mesh mesh,Mesh::halfedge_index edge)
@@ -398,8 +412,7 @@ void Slice::findEdge(Mesh mesh,Mesh::Face_index fbegin)
         loopnum++;
         //cout<<hebegin<<" ";
         fnext=mesh.face(hebegin);
-        vector<intersectFace>::iterator it =find_if(intrsurfs.begin (),intrsurfs.end (),boost::bind (&intersectFace::Faceindex, _1 ) == fnext);
-        (*it).isSliced=true;
+        isSliced[fnext]=true;
     }while(fnext!=fbegin);
     //cout<<endl;
     loopNum.push_back(loopnum);
@@ -442,11 +455,11 @@ void Slice::parallelPoint(Mesh mesh,Mesh::Face_index fbegin)
                     f0=mesh.face(h0);
                     f1=mesh.face(h1);
                     //cout<<f0<<f1<<endl;
-                    vector<intersectFace>::iterator it0 =find_if(intrsurfs.begin (),intrsurfs.end (),boost::bind (&intersectFace::Faceindex, _1 ) == f0);
-                    vector<intersectFace>::iterator it1 =find_if(intrsurfs.begin (),intrsurfs.end (),boost::bind (&intersectFace::Faceindex, _1 ) == f1);
-                    if(it0 == intrsurfs.end() || it1 == intrsurfs.end())
+                    vector<intersectFace>::iterator it0 =find_if(parallfaces.begin (),parallfaces.end (),boost::bind (&intersectFace::Faceindex, _1 ) == f0);
+                    vector<intersectFace>::iterator it1 =find_if(parallfaces.begin (),parallfaces.end (),boost::bind (&intersectFace::Faceindex, _1 ) == f1);
+                    if(it0 == parallfaces.end() || it1 == parallfaces.end())
                     {
-                        if(it0 != intrsurfs.end())
+                        if(it0 != parallfaces.end())
                         {
                             (*it0).isSliced=true;
                         }
@@ -457,6 +470,7 @@ void Slice::parallelPoint(Mesh mesh,Mesh::Face_index fbegin)
                         vnext=*vbegin;
                         //cout <<zheight<<":"<<*vbegin<<" "<<mesh.point(*vbegin)<<endl;
                     }
+
                 }
             }
             vbegin++;

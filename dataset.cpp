@@ -12,25 +12,6 @@ dataSet::~dataSet()
 
 }
 
-void dataSet::constructMesh(vector <Point> vertices,vector<vector<int>> faceList)
-{
-    mesh.clear();
-    for (int i=0;i<vertices.size();i++)
-    {
-        Mesh::Vertex_index v0=mesh.add_vertex(Point(vertices[i].x(),vertices[i].y(),vertices[i].z()));
-    }
-    //cout<<"number of vertices:"<<mesh.vertices().size()<<endl;
-    for(int i=0;i<faceList.size();i++)
-    {
-        Mesh::Vertex_index vx(faceList[i][0]);
-        Mesh::Vertex_index vy(faceList[i][1]);
-        Mesh::Vertex_index vz(faceList[i][2]);
-        //cout<<vx<<" "<<vy<<" "<<vz<<endl;
-        mesh.add_face(vx,vy,vz);
-    }
-    //qDebug()<<"number of faces:"<<mesh.faces().size()<<endl;
-}
-
 void dataSet::getIndices()
 {
     vertices.clear();

@@ -12,7 +12,7 @@
 #include <sstream>
 #include "hashtable.h"
 #include "Slice.h"
-#include <GL/GLU.h>
+//#include <GL/GLU.h>
 
 class QTimer;
 using namespace std;

@@ -19,17 +19,16 @@ bool ReadSTLFile::ReadStlFile(const QString filename)
     {
         file.read(buffer,file.size());
     }
-
     if (buffer[0]=='s')//判断格式
     {
-        qDebug()<<"File is ASCII"<<endl;
+        qDebug()<<"File is ASCII";
         vector<Point>().swap(normalList);//清空vector
         dataset.mesh.clear();
         ReadASCII(buffer);
     }
     else
     {
-        qDebug()<<"File is Binary"<<endl;
+        qDebug()<<"File is Binary";
         vector<Point>().swap(normalList);
         dataset.mesh.clear();
         ReadBinary(buffer);
@@ -84,7 +83,6 @@ bool ReadSTLFile::ReadASCII(const char *buffer)
         Mesh::Vertex_index vy(point[1]);
         Mesh::Vertex_index vz(point[2]);
         dataset.mesh.add_face(vx,vy,vz);
-
         numberTriangles++;
         getline(ss, useless);//空行
         getline(ss, useless);//end loop

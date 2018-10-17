@@ -8,17 +8,15 @@ using namespace std;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
 typedef Kernel::Point_3 Point;
-typedef boost::graph_traits<Mesh>::face_descriptor face_descriptor;
+//typedef boost::graph_traits<Mesh>::face_descriptor face_descriptor;
 struct intersectFace
 {
     Mesh::Face_index Faceindex;
     bool isSliced;
-    bool isParallel;
-    intersectFace(Mesh::Face_index faceindex,bool issliced,bool isparallel)
+    intersectFace(Mesh::Face_index faceindex,bool issliced)
     {
         Faceindex=faceindex;
         isSliced=issliced;
-        isParallel=isparallel;
     }
 };
 struct sliceData
@@ -44,13 +42,14 @@ public:
     void startSlice(Mesh mesh,double zmin,double zmax);
 
 private:
-    vector<intersectFace> intrsurfs;
+    vector<intersectFace> parallfaces;
     vector<float>normalangle;
     vector<Mesh::halfedge_index> intredges;
     vector<vector<Point>> points;
     vector<int> loopNum;
     double adaptthick;
     float zheight;
+    Mesh::Property_map<Mesh::face_index,bool>isSliced;
 
     float *interSection1,*interSection2;
     cl_device_id device;

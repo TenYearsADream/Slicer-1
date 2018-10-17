@@ -41,6 +41,8 @@ private:
     QSpinBox *layerSpinBox;
     QSpinBox *placeSpinBoxx,*placeSpinBoxy,*placeSpinBoxz;
     QCheckBox *isAdapt,*isParaComp;
+
+
 };
 
 #endif // MAINWINDOW_H
