@@ -12,7 +12,6 @@
 #include <sstream>
 #include "hashtable.h"
 #include "Slice.h"
-//#include <GL/GLU.h>
 
 class QTimer;
 using namespace std;
@@ -25,7 +24,7 @@ public:
     ~MyGLWidget();
     vector<GLushort> indices;
     vector<GLfloat> vertices;
-    vector<sliceData> intrpoints;
+    vector<Polylines> intrpoints;
     vector <vector<int>> clusterTable;
     GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis
     int layer;

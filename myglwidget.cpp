@@ -117,7 +117,7 @@ void MyGLWidget::paintGL()
     QMatrix4x4 mv = view * model;
     if(!intrpoints.empty())
     {
-        if(!intrpoints[layer].Points.empty())
+        if(!intrpoints[layer].empty())
         {
             sliceProgram->setUniformValue("ModelViewMatrix", mv);
             sliceProgram->setUniformValue("NormalMatrix", mv.normalMatrix());
@@ -141,26 +141,26 @@ void::MyGLWidget::paintSlice(int l)
     //cout<<intrpoints[l].Points.empty()<<endl;
     vector<GLushort> sliceindices;
     vector<GLfloat> slicevertices;
-    for(int i=0;i<intrpoints[l].Points.size();i++)
+    for(list<Lines>::const_iterator iter = intrpoints[l].begin();iter != intrpoints[l].end();iter++)
     {
-        for(int j=0;j<intrpoints[l].Points[i].size();j++)
+        for(uint j=0;j<(*iter).size();j++)
         {
-            slicevertices.push_back(intrpoints[l].Points[i][j].x());
-            slicevertices.push_back(intrpoints[l].Points[i][j].y());
-            slicevertices.push_back(intrpoints[l].Points[i][j].z());
+            slicevertices.push_back((*iter).at(j).x());
+            slicevertices.push_back((*iter).at(j).y());
+            slicevertices.push_back((*iter).at(j).z());
         }
     }
-    for(int i=0;i<intrpoints[l].Points.size();i++)
+    for(list<Lines>::const_iterator iter = intrpoints[l].begin();iter != intrpoints[l].end();iter++)
     {
         size_t n;
-        if(i>0)
-            n=intrpoints[l].Points[i-1].size();
+        if(iter!=intrpoints[l].begin())
+            n=(*iter).size();
         else
             n=0;
-        for(int j=0;j<intrpoints[l].Points[i].size();j++)
+        for(int j=0;j<(*iter).size();j++)
         {
             sliceindices.push_back(n+j);
-            if(j+1==intrpoints[l].Points[0].size())
+            if(j+1==intrpoints[l].front().size())
             {
                 sliceindices.push_back(n);
             }

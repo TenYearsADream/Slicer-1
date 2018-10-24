@@ -16,10 +16,10 @@ typedef Mesh::Property_map<face_descriptor, size_t> Facet_int_map;
 typedef CGAL::Face_filtered_graph<Mesh> Filtered_graph;
 using namespace std;
 ShapeDiameterFunction::ShapeDiameterFunction(){
-    cout<<"ShapeDiameterFunction"<<endl;
+    //cout<<"ShapeDiameterFunction"<<endl;
 }
 ShapeDiameterFunction::~ShapeDiameterFunction(){
-    cout<<"ShapeDiameterFunction"<<endl;
+    //cout<<"ShapeDiameterFunction"<<endl;
 }
 
 vector<vector<double>> ShapeDiameterFunction::calculateSDF(Mesh mesh)

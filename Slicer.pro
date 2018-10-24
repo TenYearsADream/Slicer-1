@@ -5,7 +5,7 @@
 #-------------------------------------------------
 
 QT       += core gui
-
+QT += concurrent
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = Slicer
@@ -27,7 +27,8 @@ HEADERS  += mainwindow.h \
     shapediameterfunction.h \
     hierarchicalclustering.h \
     Slice.h \
-    dataset.h
+    dataset.h \
+    Polygon_mesh_slicer_mine.h
 
 DISTFILES += \
     resource/open-file.png

@@ -15,6 +15,8 @@
 #include <Qtime>
 #include <QLabel>
 #include <QProgressDialog>
+#include <QThread>
+#include <QtConcurrent>
 #include <iostream>
 #include "windows.h"
 #include"WinBase.h"
@@ -226,7 +228,6 @@ void MainWindow::modelSegment()
 void MainWindow::modelSlice()
 {
     QTime time;
-    Slice slice;
     opengl->clusterTable.clear();
     opengl->intrpoints.clear();
     layerSlider->setValue(1);
@@ -236,6 +237,9 @@ void MainWindow::modelSlice()
     if(!dataset.mesh.is_empty())
     {
         time.start();
+        cout<<"start slice"<<endl;
+//        QFuture<void> fut = QtConcurrent::run(&slice,Slice::startSlice,dataset.mesh,dataset.surroundBox[4],dataset.surroundBox[5]);
+//        fut.waitForFinished();
         slice.startSlice(dataset.mesh,dataset.surroundBox[4],dataset.surroundBox[5]);
         if(slice.isParaComp)
             cout<<"time of parallel computing:"<<time.elapsed()<<"ms"<<endl;
@@ -243,11 +247,11 @@ void MainWindow::modelSlice()
             cout<<"time of cpu computing:"<<time.elapsed()<<"ms"<<endl;
         opengl->intrpoints=slice.intrpoints;
         if(slice.isAdapt)
-            cout<<"number of layers with adapt:"<<slice.layernumber<<endl;
+            cout<<"number of layers with adapt:"<<slice.layernumber-1<<endl;
         else
-            cout<<"number of layers without adapt:"<<slice.layernumber<<endl;
-        layerSlider->setRange(1,slice.layernumber);
-        layerSpinBox->setRange(1,slice.layernumber);
+            cout<<"number of layers without adapt:"<<slice.layernumber-1<<endl;
+        layerSlider->setRange(1,slice.layernumber-1);
+        layerSpinBox->setRange(1,slice.layernumber-1);
 
     } else {
         QMessageBox::warning(this, tr("error"),

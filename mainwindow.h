@@ -34,6 +34,7 @@ private:
     QAction *openAction;
     ReadSTLFile readstl;
     MyGLWidget *opengl;
+    Slice slice;
     ShapeDiameterFunction *shapediameterfunction;
 
     QDoubleSpinBox *segSpinBox,*sliceSpinBox;
