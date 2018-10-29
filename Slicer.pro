@@ -19,7 +19,8 @@ SOURCES += main.cpp\
     shapediameterfunction.cpp \
     hierarchicalclustering.cpp \
     Slice.cpp \
-    dataset.cpp
+    dataset.cpp \
+    opencl.cpp
 
 HEADERS  += mainwindow.h \
     myglwidget.h \
@@ -28,7 +29,8 @@ HEADERS  += mainwindow.h \
     hierarchicalclustering.h \
     Slice.h \
     dataset.h \
-    Polygon_mesh_slicer_mine.h
+    Polygon_mesh_slicer_mine.h \
+    opencl.h
 
 DISTFILES += \
     resource/open-file.png

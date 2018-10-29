@@ -2,10 +2,12 @@
 #define SLICE_H
 #include <vector>
 #include <QString>
+#include <QTime>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
 #include <CL/cl.h>
 #include <boost/any.hpp>
+#include "opencl.h"
 using namespace std;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
@@ -30,28 +32,23 @@ public:
     void startSlice(Mesh mesh,double zmin,double zmax);
 
 private:
-    vector<float>normalangle;
     Lines lines;
+    QTime time;
     Polylines polylines;
     Intredges intredges;
-    vector<int> loopNum;
-    double adaptthick;
+    vector<Intredges> sliceedges;
     float zheight;
+    vector<float>z;
+    int linesnumber;
     Mesh::Property_map<Mesh::face_index,int>isSliced;
 
-    float *interSection1,*interSection2;
-    cl_device_id device;
-    cl_context context;
-    cl_command_queue queue;
-    cl_program program;
-    cl_kernel cap;
+    int findtime,comptime;
+
+    OpenCL opencl;
+
 private:
-    float normalAngle(Mesh mesh,Mesh::Face_index f0);
-    void initOpencl();
-    cl_device_id create_device();
-    cl_program build_program(cl_context ctx, cl_device_id dev, const char* filename);
-    void executeKernel(float *interSection1,float*interSection2,float *buf,int number);
-    void setBuffer(Mesh mesh,int BUFSIZE);
+    float adaptSlice(Mesh mesh,Intredges intredges);
+
 };
 
 #endif // SLICE_H

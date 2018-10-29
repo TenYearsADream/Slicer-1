@@ -5,7 +5,6 @@
 
 #include <algorithm>
 #include <QtCore/qmath.h>
-#include <QTime>
 #include <QDebug>
 #include <windows.h>
 #include <QProgressDialog>
@@ -18,17 +17,17 @@ Slice::Slice()
     zheight=0.0f;
     isParaComp=true;
     lines.reserve(1000);
-    initOpencl();
+    findtime=0;
+    comptime=0;
+    sliceedges.reserve(2000);
+    z.reserve(2000);
+    linesnumber=0;
+
 }
 
 Slice::~Slice()
 {
-    clReleaseCommandQueue(queue);
-    clReleaseProgram(program);
-    clReleaseContext(context);
-    clReleaseKernel(cap);
-    delete(interSection1);
-    delete(interSection2);
+
 }
 
 
@@ -36,7 +35,9 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
 {
     CGAL::Polygon_mesh_slicer<Mesh, Kernel> slicer(mesh);
     intrpoints.clear();
-    layernumber=1;
+    sliceedges.clear();
+    z.clear();
+    layernumber=0;
 //    QProgressDialog *progressDlg=new QProgressDialog();
 //    progressDlg->setWindowModality(Qt::WindowModal);
 //    progressDlg->setMinimumDuration(0);
@@ -45,6 +46,8 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
 //    progressDlg->setLabelText("正在切片......");
 //    progressDlg->setRange(zmin,zmax);
     zheight=zmin;
+    findtime=0;
+    comptime=0;
     while(zheight<=zmax)
     {
 //        progressDlg->setValue(zheight);
@@ -58,9 +61,12 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
         //cout<<"layer of "<<layernumber<<":"<<endl;
         polylines.clear();
         intredges.clear();
+        time.start();
         slicer(Kernel::Plane_3(0, 0, 1, -zheight),back_inserter(intredges));
+        findtime +=time.elapsed();
         if(!isParaComp)
         {
+            time.restart();
             for(list<Outline>::iterator iter= intredges.begin();iter != intredges.end();iter++)
             {
                 lines.clear();
@@ -91,13 +97,109 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
                 }
                 polylines.push_back(lines);
             }
+            intrpoints.push_back(polylines);
+            comptime +=time.elapsed();
         }
         else
         {
-            int lineNum=0;
+            time.restart();
+            int num=0;
             for(list<Outline>::iterator iter= intredges.begin();iter != intredges.end();iter++)
             {
                 (*iter).pop_back();
+                //cout<<(*iter).size()<<endl;
+                num +=(*iter).size();
+            }
+            if(linesnumber<num)
+            {
+                linesnumber=num;
+            }
+            sliceedges.push_back(intredges);
+            z.push_back(zheight);
+            comptime +=time.elapsed();
+        }
+        layernumber++;
+        if(isAdapt)
+        {
+            float adaptthick;
+            float minangle=adaptSlice(mesh,intredges);
+            if(minangle>0.99)
+                adaptthick=0.3;
+            else
+                adaptthick=0.1/(minangle+1e-3);
+            if(adaptthick<0.1)adaptthick=0.1;
+            if(adaptthick>0.3)adaptthick=0.3;
+            //cout<<adaptthick<<endl;
+            zheight += adaptthick;
+        }
+        else
+            zheight += thick;
+    }
+    if(isParaComp)
+    {
+        time.restart();
+        //cout<<linesnumber<<endl;
+        float *interSection1,*interSection2,*result;
+        interSection1 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
+        interSection2 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
+        result = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
+        for(int i=0;i<layernumber;i++)
+        {
+            int lineNum=0;
+            for(list<Outline>::iterator iter= sliceedges[i].begin();iter != sliceedges[i].end();iter++)
+            {
+                //cout<<(*iter).size()<<endl;
+                for(vector<boost::any>::iterator it=(*iter).begin();it!=(*iter).end();it++)
+                {
+                    try
+                    {
+                        Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>(*it);
+                        lineNum +=(*iter).size();
+                        break;
+                    }
+                    catch(boost::bad_any_cast & ex)
+                    {
+                        //cout<<"cast error:"<<ex.what()<<endl;
+                    }
+                }
+            }
+            if(lineNum>0)
+            {
+                int num=0;
+                for(list<Outline>::iterator iter= sliceedges[i].begin();iter != sliceedges[i].end();iter++)
+                {
+                    for(uint j=0;j<(*iter).size();j++)
+                    {
+                        try
+                        {
+                            Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>((*iter)[j]);
+                            //cout<<ed<<endl;
+                            Point p1=mesh.point(mesh.vertex(ed,0));
+                            Point p2=mesh.point(mesh.vertex(ed,1));
+                            //cout<<p1.x()<<" "<<p1.y()<<" "<<p1.z()<<endl;
+                            interSection1[i*3*linesnumber+3*(num+j)+0]=p1.x();
+                            interSection1[i*3*linesnumber+3*(num+j)+1]=p1.y();
+                            interSection1[i*3*linesnumber+3*(num+j)+2]=p1.z();
+                            interSection2[i*3*linesnumber+3*(num+j)+0]=p2.x();
+                            interSection2[i*3*linesnumber+3*(num+j)+1]=p2.y();
+                            interSection2[i*3*linesnumber+3*(num+j)+2]=p2.z();
+                        }
+                        catch(boost::bad_any_cast & ex)
+                        {
+                            //cout<<"cast error:"<<ex.what()<<endl;
+                        }
+                    }
+                    num +=(*iter).size();
+                }
+            }
+        }
+        opencl.executeKernel(interSection1,interSection2,result,layernumber,linesnumber,z.data());
+        for(int i=0;i<layernumber;i++)
+        {
+            polylines.clear();
+            int lineNum=0;
+            for(list<Outline>::iterator iter= sliceedges[i].begin();iter != sliceedges[i].end();iter++)
+            {
                 //cout<<(*iter).size()<<endl;
                 for(vector<boost::any>::iterator it=(*iter).begin();it!=(*iter).end();it++)
                 {
@@ -115,7 +217,7 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
             }
             if(lineNum==0)
             {
-                for(list<Outline>::iterator iter= intredges.begin();iter != intredges.end();iter++)
+                for(list<Outline>::iterator iter=sliceedges[i].begin();iter !=sliceedges[i].end();iter++)
                 {
                     lines.clear();
                     //cout<<(*iter).size()<<endl;
@@ -133,276 +235,86 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
                     }
                     polylines.push_back(lines);
                 }
+                intrpoints.push_back(polylines);
             }
             else
             {
-                float *result;
-                result  = (float *)malloc(lineNum *3* sizeof(float));
-                //for (int i = 0; i < lineNum *3; result[i] = 0, i++);
-                setBuffer(mesh,lineNum);
-                executeKernel(interSection1,interSection2,result,lineNum);
                 int num=0;
-                for(list<Outline>::iterator iter= intredges.begin();iter != intredges.end();iter++)
+                for(list<Outline>::iterator iter= sliceedges[i].begin();iter !=sliceedges[i].end();iter++)
                 {
                     lines.clear();
                     for(uint j=0;j<(*iter).size();j++)
                     {
-                        //cout<<buf[3*(num+j)]<<" "<<buf[3*(num+j)+1]<<" "<<buf[3*(num+j)+2]<<endl;
-                        float x=result[3*(num+j)];
-                        float y=result[3*(num+j)+1];
-                        float z=result[3*(num+j)+2];
-                        lines.push_back(Point(x,y,z));
+                        float x=result[i*3*linesnumber+3*(num+j)+0];
+                        float y=result[i*3*linesnumber+3*(num+j)+1];
+                        lines.push_back(Point(x,y,z[i]));
                     }
                     num +=(*iter).size();
                     polylines.push_back(lines);
                 }
-                free(interSection1);
-                free(interSection2);
-                free(result);
+                intrpoints.push_back(polylines);
             }
 
         }
-        intrpoints.push_back(polylines);
-        layernumber++;
-//            for(int i=0;i<normalangle.size();i++)
-//            {
-//                cout<<normalangle[i]<<" ";
-//            }
-//            cout<<endl;
-            //float minnormalangle=*min_element(normalangle.begin(),normalangle.end());
-            //cout<<minnormalangle<<endl;
-//            if(minnormalangle>0.99)
-//                adaptthick=0.3;
-//            else
-//                adaptthick=0.1/(minnormalangle+1e-3);
-//        }
-//        if(adaptthick<0.1)adaptthick=0.1;
-//        if(adaptthick>0.3)adaptthick=0.3;
-        //cout<<adaptthick<<endl;
-//        if(isAdapt)
-//            zheight += adaptthick;
-//        else
-            zheight += thick;
+        free(interSection1);
+        free(interSection2);
+        comptime +=time.elapsed();
+        cout<<"find edge time:"<<findtime<<"ms"<<endl;
+        cout<<"gpu compute time:"<<comptime<<"ms"<<endl;
+        //cout<<"time of parallel computing:"<<time.elapsed()<<"ms"<<endl;
     }
-
+    else
+    {
+        cout<<"find edge time:"<<findtime<<"ms"<<endl;
+        cout<<"cpu compute time:"<<comptime<<"ms"<<endl;
+        //cout<<"time of cpu computing:"<<time.elapsed()<<"ms"<<endl;
+    }
     //progressDlg->close();
 }
 
-float Slice::normalAngle(Mesh mesh,Mesh::Face_index f0)
+float Slice::adaptSlice(Mesh mesh,Intredges intredges)
 {
-    CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
-    vector<Point> point;
-    for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(f0), mesh);vbegin != vend;++vbegin)
-    {
-        point.push_back(mesh.point(*vbegin));
-        //cout << *vbegin<<":"<<mesh.point(*vbegin)<<endl;
-    }
-    //cout<<point.size()<<endl;
-    float x1,x2,x3,y1,y2,y3,z1,z2,z3,nx,ny,nz;
-    //求面f0的法向量
-    x1=point[0].x();y1=point[0].y();z1=point[0].z();
-    x2=point[1].x();y2=point[1].y();z2=point[1].z();
-    x3=point[2].x();y3=point[2].y();z3=point[2].z();
-    nx=(y2-y1)*(z3-z1)-(z2-z1)*(y3-y1);
-    ny=(z2-z1)*(x3-x1)-(z3-z1)*(x2-x1);
-    nz=(x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
-    //cout<<nx<<" "<<ny<<" "<<nz<<endl;
-    float dist=sqrt(nx*nx+ny*ny+nz*nz);
-    float cos=nz/dist;
-    //cout<<cos<<endl;
-    return cos;
-}
-
-void Slice::initOpencl()
-{
-    const char* PROGRAM_FILE ="F:/QT/Slicer/kernels.cl";
-    const char* KERNEL_FUNC ="cap";
-
-    /* OpenCL data structures */
-    int  err;
-    /* Create a device and context */
-    device = create_device();
-    context = clCreateContext(NULL, 1, &device, NULL, NULL, &err);
-    if(err < 0) {
-       perror("Couldn't create a context");
-       exit(1);
-    }
-
-    /* Build the program and create a kernel */
-    program = build_program(context, device, PROGRAM_FILE);
-    cap=clCreateKernel(program, KERNEL_FUNC, &err);
-    if(err < 0) {
-       perror("Couldn't create a kernel");
-       exit(1);
-    };
-    /* Create a command queue */
-    queue = clCreateCommandQueue(context, device,CL_QUEUE_PROFILING_ENABLE, &err);
-    if(err < 0) {
-       perror("Couldn't create a command queue");
-       exit(1);
-    };
-}
-
-cl_device_id Slice::create_device() {
-
-   cl_device_id dev,*devices;
-   cl_uint err,num,num_devices;
-   char name_data[48];
-
-   err = clGetPlatformIDs(0, 0, &num);
-   /* Identify a platform */
-   vector<cl_platform_id> platforms(num);
-   err = clGetPlatformIDs(num, &platforms[0], &num);
-   if(err < 0) {
-      perror("Couldn't identify a platform");
-      exit(1);
-   }
-
-   /* Access a device */
-   err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU,0,NULL, &num_devices);
-   //cout<<"The number of devices:"<<num_devices<<endl;
-   if(err == CL_DEVICE_NOT_FOUND) {
-       cout<<"Couldn't find and GPU,use CPU instead!"<<endl;
-       err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_CPU, 1, &dev, NULL);
-   }
-   if(err < 0) {
-      perror("Couldn't access any devices");
-      exit(1);
-   }
-   devices=(cl_device_id*)malloc(sizeof(cl_device_id) * num_devices);
-   clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU,num_devices, devices, NULL);
-   for(int i=0; i<num_devices; i++) {
-       err = clGetDeviceInfo(devices[i], CL_DEVICE_NAME,sizeof(name_data), name_data, NULL);
-       //cout<<"Name:"<<name_data<<endl;
-   }
-   return devices[0];
-}
-
-/* Create program from a file and compile it */
-cl_program Slice::build_program(cl_context ctx, cl_device_id dev, const char* filename) {
-
-   cl_program program;
-   FILE *program_handle;
-   char *program_buffer, *program_log;
-   size_t program_size, log_size;
-   int err;
-
-   /* Read program file and place content into buffer */
-   program_handle = fopen(filename, "rb");
-   if(program_handle == NULL) {
-      perror("Couldn't find the program file");
-      exit(1);
-   }
-   fseek(program_handle, 0, SEEK_END);
-   program_size = ftell(program_handle);
-   rewind(program_handle);
-   program_buffer = (char*)malloc(program_size + 1);
-   program_buffer[program_size] = '\0';
-   fread(program_buffer, sizeof(char), program_size, program_handle);
-   fclose(program_handle);
-
-   /* Create program from file */
-   program = clCreateProgramWithSource(ctx, 1,
-      (const char**)&program_buffer, &program_size, &err);
-   if(err < 0) {
-      perror("Couldn't create the program");
-      exit(1);
-   }
-   free(program_buffer);
-
-   /* Build program */
-   err = clBuildProgram(program, 0, NULL, NULL, NULL, NULL);
-   if(err < 0) {
-
-      /* Find size of log and print to std output */
-      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG,
-            0, NULL, &log_size);
-      program_log = (char*) malloc(log_size + 1);
-      program_log[log_size] = '\0';
-      clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG,
-            log_size + 1, program_log, NULL);
-      printf("%s\n", program_log);
-      free(program_log);
-      exit(1);
-   }
-
-   return program;
-}
-
-void Slice::executeKernel(float *interSection1,float*interSection2,float *result,int lineNum)
-{
-
-    int err;
-    cl_event ev;
-    /* Create a buffer to hold data */
-    cl_mem buf1 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,lineNum *3*sizeof(float),interSection1, &err);
-    cl_mem buf2 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,lineNum *3*sizeof(float),interSection2, &err);
-    cl_mem clz = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,sizeof(float),&zheight, &err);
-    cl_mem clbuf = clCreateBuffer(context, CL_MEM_WRITE_ONLY, lineNum *3*sizeof(float), NULL, &err);
-    if(err < 0) {
-       perror("Couldn't create buffer!");
-       exit(1);
-    };
-
-    /* Create kernel argument */
-    clSetKernelArg(cap, 0, sizeof(cl_mem), &buf1);
-    clSetKernelArg(cap, 1, sizeof(cl_mem), &buf2);
-    clSetKernelArg(cap, 2, sizeof(cl_mem), &clbuf);
-    clSetKernelArg(cap, 3, sizeof(cl_mem), &clz);
-
-    size_t globalSize[2] ={size_t(lineNum),3};
-    err=clEnqueueNDRangeKernel(queue, cap, 2, NULL, globalSize,NULL, 0, NULL, &ev);
-    clFinish(queue);
-    err = clEnqueueReadBuffer(queue, clbuf, CL_TRUE, 0,lineNum *3* sizeof(float), result, 0, NULL, NULL);
-    if(err < 0) {
-       perror("Couldn't enqueue the read buffer command");
-       exit(1);
-    }
-
-//    cl_ulong startTime = 0, endTime = 0;
-//    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &startTime, NULL);
-//    clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &endTime, NULL);
-//    cl_ulong totaltime = endTime - startTime;
-//    cout<<"simple kernel exec time: " <<totaltime*1e-6<<"ms"<<endl;
-
-    /* Deallocate resources */
-    clReleaseMemObject(buf1);
-    clReleaseMemObject(buf2);
-    clReleaseMemObject(clbuf);
-    clReleaseMemObject(clz);
-    clReleaseEvent(ev);
-}
-
-void Slice::setBuffer(Mesh mesh,int lineNum)
-{
-    interSection1 = (float *)malloc(lineNum *3* sizeof(float));
-    interSection2 = (float *)malloc(lineNum *3* sizeof(float));
-    int num=0;
+    vector<float> angle;
+    angle.reserve(2000);
     for(list<Outline>::iterator iter= intredges.begin();iter != intredges.end();iter++)
     {
-        (*iter).pop_back();
-        for(uint j=0;j<(*iter).size();j++)
+        //cout<<(*iter).size()<<endl;
+        for(vector<boost::any>::iterator it=(*iter).begin();it!=(*iter).end();it++)
         {
             try
             {
-                Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>((*iter)[j]);
-                //cout<<ed<<endl;
-                Point p1=mesh.point(mesh.vertex(ed,0));
-                Point p2=mesh.point(mesh.vertex(ed,1));
-                //cout<<p1.x()<<" "<<p1.y()<<" "<<p1.z()<<endl;
-                interSection1[3*(num+j)+0]=p1.x();
-                interSection1[3*(num+j)+1]=p1.y();
-                interSection1[3*(num+j)+2]=p1.z();
-                interSection2[3*(num+j)+0]=p2.x();
-                interSection2[3*(num+j)+1]=p2.y();
-                interSection2[3*(num+j)+2]=p2.z();
+                Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>(*it);
+                Mesh::face_index f0=mesh.face(mesh.halfedge(ed,0));
+                //cout<<f<<" ";
+                CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
+                vector<Point> point;
+                for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(f0), mesh);vbegin != vend;++vbegin)
+                {
+                    point.push_back(mesh.point(*vbegin));
+                    //cout << *vbegin<<":"<<mesh.point(*vbegin)<<endl;
+                }
+                //cout<<point.size()<<endl;
+                float x1,x2,x3,y1,y2,y3,z1,z2,z3,nx,ny,nz;
+                //求面f0的法向量
+                x1=point[0].x();y1=point[0].y();z1=point[0].z();
+                x2=point[1].x();y2=point[1].y();z2=point[1].z();
+                x3=point[2].x();y3=point[2].y();z3=point[2].z();
+                nx=(y2-y1)*(z3-z1)-(z2-z1)*(y3-y1);
+                ny=(z2-z1)*(x3-x1)-(z3-z1)*(x2-x1);
+                nz=(x2-x1)*(y3-y1)-(x3-x1)*(y2-y1);
+                //cout<<nx<<" "<<ny<<" "<<nz<<endl;
+                float dist=sqrt(nx*nx+ny*ny+nz*nz);
+                float cos=nz/dist;
+                angle.push_back(cos);
             }
             catch(boost::bad_any_cast & ex)
             {
-                cout<<"cast error:"<<ex.what()<<endl;
+                angle.push_back(1.0);
+                //cout<<"cast error:"<<ex.what()<<endl;
             }
         }
-        num +=(*iter).size();
+        //cout<<endl;
     }
+    float minangle=*min_element(angle.begin(),angle.end());
+    return minangle;
 }
-

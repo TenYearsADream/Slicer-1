@@ -150,7 +150,7 @@ class Polygon_mesh_slicer
     std::vector<boost::any>current_edge;
     void start_new_polyline()
     {
-     // current_poly.clear();
+      //current_poly.clear();
       current_edge.clear();
     }
 

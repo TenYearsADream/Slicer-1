@@ -173,7 +173,7 @@ void MainWindow::openFile()
         time.start();
         if(!readstl.ReadStlFile(path))
         {
-            cout<<"读取stl文件失败!"<<endl;
+            cout<<"Failed to read STL file!"<<endl;
             return;
         }
         qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";
@@ -241,17 +241,14 @@ void MainWindow::modelSlice()
 //        QFuture<void> fut = QtConcurrent::run(&slice,Slice::startSlice,dataset.mesh,dataset.surroundBox[4],dataset.surroundBox[5]);
 //        fut.waitForFinished();
         slice.startSlice(dataset.mesh,dataset.surroundBox[4],dataset.surroundBox[5]);
-        if(slice.isParaComp)
-            cout<<"time of parallel computing:"<<time.elapsed()<<"ms"<<endl;
-        else
-            cout<<"time of cpu computing:"<<time.elapsed()<<"ms"<<endl;
+
         opengl->intrpoints=slice.intrpoints;
         if(slice.isAdapt)
-            cout<<"number of layers with adapt:"<<slice.layernumber-1<<endl;
+            cout<<"number of layers with adapt:"<<slice.layernumber<<endl;
         else
-            cout<<"number of layers without adapt:"<<slice.layernumber-1<<endl;
-        layerSlider->setRange(1,slice.layernumber-1);
-        layerSpinBox->setRange(1,slice.layernumber-1);
+            cout<<"number of layers without adapt:"<<slice.layernumber<<endl;
+        layerSlider->setRange(1,slice.layernumber);
+        layerSpinBox->setRange(1,slice.layernumber);
 
     } else {
         QMessageBox::warning(this, tr("error"),

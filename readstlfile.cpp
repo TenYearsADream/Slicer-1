@@ -12,30 +12,42 @@ using namespace std;
 bool ReadSTLFile::ReadStlFile(const QString filename)
 {
     QFile file(filename);
-    char* buffer;
-    buffer=(char *) malloc(file.size());
+    uchar* buffer;
+
+    //buffer=(uchar *) malloc(file.size());
 
     if(file.open(QIODevice::ReadOnly))
     {
-        file.read(buffer,file.size());
+        //file.read(buffer,file.size());
+        buffer=file.map(0,file.size());
     }
-    if (buffer[0]=='s')//判断格式
+    if(buffer)
     {
-        qDebug()<<"File is ASCII";
-        vector<Point>().swap(normalList);//清空vector
-        dataset.mesh.clear();
-        ReadASCII(buffer);
+        if (buffer[0]=='s')//判断格式
+        {
+            qDebug()<<"File is ASCII";
+            normalList.clear();//清空vector
+            dataset.mesh.clear();
+            ReadASCII((char*)buffer);
+        }
+        else
+        {
+            qDebug()<<"File is Binary";
+            normalList.clear();//清空vector
+            dataset.mesh.clear();
+            ReadBinary((char*)buffer);
+        }
+        file.unmap(buffer);
+        file.close();
+        //delete(buffer);//释放内存
+        return true;
     }
     else
     {
-        qDebug()<<"File is Binary";
-        vector<Point>().swap(normalList);
-        dataset.mesh.clear();
-        ReadBinary(buffer);
+        cout<<file.error()<<endl;
+        cout<<"out of memory error"<<endl;
+        return false;
     }
-    file.close();
-    free(buffer);//释放内存
-    return true;
 }
 
 bool ReadSTLFile::ReadASCII(const char *buffer)
