@@ -19,8 +19,6 @@ Slice::Slice()
     lines.reserve(1000);
     findtime=0;
     comptime=0;
-    sliceedges.reserve(2000);
-    z.reserve(2000);
     linesnumber=0;
 
 }
@@ -35,8 +33,6 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
 {
     CGAL::Polygon_mesh_slicer<Mesh, Kernel> slicer(mesh);
     intrpoints.clear();
-    sliceedges.clear();
-    z.clear();
     layernumber=0;
 //    QProgressDialog *progressDlg=new QProgressDialog();
 //    progressDlg->setWindowModality(Qt::WindowModal);
@@ -103,19 +99,98 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
         else
         {
             time.restart();
-            int num=0;
+            int lineNum=0;
             for(list<Outline>::iterator iter= intredges.begin();iter != intredges.end();iter++)
             {
                 (*iter).pop_back();
                 //cout<<(*iter).size()<<endl;
-                num +=(*iter).size();
+                for(vector<boost::any>::iterator it=(*iter).begin();it!=(*iter).end();it++)
+                {
+                    try
+                    {
+                        Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>(*it);
+                        lineNum +=(*iter).size();
+                        break;
+                    }
+                    catch(boost::bad_any_cast & ex)
+                    {
+                        //cout<<"cast error:"<<ex.what()<<endl;
+                    }
+                }
             }
-            if(linesnumber<num)
+            if(lineNum==0)
             {
-                linesnumber=num;
+                for(list<Outline>::iterator iter=intredges.begin();iter !=intredges.end();iter++)
+                {
+                    lines.clear();
+                    //cout<<(*iter).size()<<endl;
+                    for(vector<boost::any>::iterator it=(*iter).begin();it!=(*iter).end();it++)
+                    {
+                        try
+                        {
+                            Point point=boost::any_cast<Point>(*it);
+                            lines.push_back(point);
+                        }
+                        catch(boost::bad_any_cast & ex)
+                        {
+                            //cout<<"cast error:"<<ex.what()<<endl;
+                        }
+                    }
+                    polylines.push_back(lines);
+                }
             }
-            sliceedges.push_back(intredges);
-            z.push_back(zheight);
+            else
+            {
+                float *interSection1,*interSection2,*result;
+                result  = (float *)malloc(lineNum *3* sizeof(float));
+                interSection1 = (float *)malloc(lineNum *3* sizeof(float));
+                interSection2 = (float *)malloc(lineNum *3* sizeof(float));
+                int num=0;
+                for(list<Outline>::iterator iter= intredges.begin();iter != intredges.end();iter++)
+                {
+                    for(uint j=0;j<(*iter).size();j++)
+                    {
+                        try
+                        {
+                            Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>((*iter)[j]);
+                            //cout<<ed<<endl;
+                            Point p1=mesh.point(mesh.vertex(ed,0));
+                            Point p2=mesh.point(mesh.vertex(ed,1));
+                            //cout<<p1.x()<<" "<<p1.y()<<" "<<p1.z()<<endl;
+                            interSection1[3*(num+j)+0]=p1.x();
+                            interSection1[3*(num+j)+1]=p1.y();
+                            interSection1[3*(num+j)+2]=p1.z();
+                            interSection2[3*(num+j)+0]=p2.x();
+                            interSection2[3*(num+j)+1]=p2.y();
+                            interSection2[3*(num+j)+2]=p2.z();
+                        }
+                        catch(boost::bad_any_cast & ex)
+                        {
+                            cout<<"cast error:"<<ex.what()<<endl;
+                        }
+                    }
+                    num +=(*iter).size();
+                }
+                opencl.executeKernel(interSection1,interSection2,result,lineNum,zheight);
+                num=0;
+                for(list<Outline>::iterator iter= intredges.begin();iter !=intredges.end();iter++)
+                {
+                    lines.clear();
+                    for(uint j=0;j<(*iter).size();j++)
+                    {
+                        float x=result[3*(num+j)];
+                        float y=result[3*(num+j)+1];
+                        float z=result[3*(num+j)+2];
+                        lines.push_back(Point(x,y,z));
+                    }
+                    num +=(*iter).size();
+                    polylines.push_back(lines);
+                }
+                free(interSection1);
+                free(interSection2);
+                free(result);
+            }
+            intrpoints.push_back(polylines);
             comptime +=time.elapsed();
         }
         layernumber++;
@@ -137,128 +212,6 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
     }
     if(isParaComp)
     {
-        time.restart();
-        //cout<<linesnumber<<endl;
-        float *interSection1,*interSection2,*result;
-        interSection1 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
-        interSection2 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
-        result = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
-        for(int i=0;i<layernumber;i++)
-        {
-            int lineNum=0;
-            for(list<Outline>::iterator iter= sliceedges[i].begin();iter != sliceedges[i].end();iter++)
-            {
-                //cout<<(*iter).size()<<endl;
-                for(vector<boost::any>::iterator it=(*iter).begin();it!=(*iter).end();it++)
-                {
-                    try
-                    {
-                        Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>(*it);
-                        lineNum +=(*iter).size();
-                        break;
-                    }
-                    catch(boost::bad_any_cast & ex)
-                    {
-                        //cout<<"cast error:"<<ex.what()<<endl;
-                    }
-                }
-            }
-            if(lineNum>0)
-            {
-                int num=0;
-                for(list<Outline>::iterator iter= sliceedges[i].begin();iter != sliceedges[i].end();iter++)
-                {
-                    for(uint j=0;j<(*iter).size();j++)
-                    {
-                        try
-                        {
-                            Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>((*iter)[j]);
-                            //cout<<ed<<endl;
-                            Point p1=mesh.point(mesh.vertex(ed,0));
-                            Point p2=mesh.point(mesh.vertex(ed,1));
-                            //cout<<p1.x()<<" "<<p1.y()<<" "<<p1.z()<<endl;
-                            interSection1[i*3*linesnumber+3*(num+j)+0]=p1.x();
-                            interSection1[i*3*linesnumber+3*(num+j)+1]=p1.y();
-                            interSection1[i*3*linesnumber+3*(num+j)+2]=p1.z();
-                            interSection2[i*3*linesnumber+3*(num+j)+0]=p2.x();
-                            interSection2[i*3*linesnumber+3*(num+j)+1]=p2.y();
-                            interSection2[i*3*linesnumber+3*(num+j)+2]=p2.z();
-                        }
-                        catch(boost::bad_any_cast & ex)
-                        {
-                            //cout<<"cast error:"<<ex.what()<<endl;
-                        }
-                    }
-                    num +=(*iter).size();
-                }
-            }
-        }
-        opencl.executeKernel(interSection1,interSection2,result,layernumber,linesnumber,z.data());
-        for(int i=0;i<layernumber;i++)
-        {
-            polylines.clear();
-            int lineNum=0;
-            for(list<Outline>::iterator iter= sliceedges[i].begin();iter != sliceedges[i].end();iter++)
-            {
-                //cout<<(*iter).size()<<endl;
-                for(vector<boost::any>::iterator it=(*iter).begin();it!=(*iter).end();it++)
-                {
-                    try
-                    {
-                        Mesh::edge_index ed=boost::any_cast<Mesh::edge_index>(*it);
-                        lineNum +=(*iter).size();
-                        break;
-                    }
-                    catch(boost::bad_any_cast & ex)
-                    {
-                        //cout<<"cast error:"<<ex.what()<<endl;
-                    }
-                }
-            }
-            if(lineNum==0)
-            {
-                for(list<Outline>::iterator iter=sliceedges[i].begin();iter !=sliceedges[i].end();iter++)
-                {
-                    lines.clear();
-                    //cout<<(*iter).size()<<endl;
-                    for(vector<boost::any>::iterator it=(*iter).begin();it!=(*iter).end();it++)
-                    {
-                        try
-                        {
-                            Point point=boost::any_cast<Point>(*it);
-                            lines.push_back(point);
-                        }
-                        catch(boost::bad_any_cast & ex)
-                        {
-                            //cout<<"cast error:"<<ex.what()<<endl;
-                        }
-                    }
-                    polylines.push_back(lines);
-                }
-                intrpoints.push_back(polylines);
-            }
-            else
-            {
-                int num=0;
-                for(list<Outline>::iterator iter= sliceedges[i].begin();iter !=sliceedges[i].end();iter++)
-                {
-                    lines.clear();
-                    for(uint j=0;j<(*iter).size();j++)
-                    {
-                        float x=result[i*3*linesnumber+3*(num+j)+0];
-                        float y=result[i*3*linesnumber+3*(num+j)+1];
-                        lines.push_back(Point(x,y,z[i]));
-                    }
-                    num +=(*iter).size();
-                    polylines.push_back(lines);
-                }
-                intrpoints.push_back(polylines);
-            }
-
-        }
-        free(interSection1);
-        free(interSection2);
-        comptime +=time.elapsed();
         cout<<"find edge time:"<<findtime<<"ms"<<endl;
         cout<<"gpu compute time:"<<comptime<<"ms"<<endl;
         //cout<<"time of parallel computing:"<<time.elapsed()<<"ms"<<endl;

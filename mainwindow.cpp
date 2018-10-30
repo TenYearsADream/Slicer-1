@@ -194,8 +194,8 @@ void MainWindow::openFile()
         opengl->vertices.clear();
         opengl->indices.clear();
         opengl->intrpoints.clear();
-        opengl->vertices=dataset.vertices;
-        opengl->indices=dataset.indices;
+//        opengl->vertices=dataset.vertices;
+//        opengl->indices=dataset.indices;
         //showMemoryInfo();
 
     } else {

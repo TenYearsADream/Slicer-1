@@ -7,7 +7,7 @@ class OpenCL
 public:
     OpenCL();
     ~OpenCL();
-    void executeKernel(float *interSection1,float *interSection2,float *result,int LAYERNUMBER,int LINESNUMBER ,float *zheight);
+    void executeKernel(float *interSection1,float *interSection2,float *result,int lineNum,float zheight);
 
 private:
     void initOpencl();

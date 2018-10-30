@@ -20,7 +20,7 @@ OpenCL::~OpenCL()
 
 void OpenCL::initOpencl()
 {
-    const char* PROGRAM_FILE ="F:/QT/QtOpenCL/HelloWorld/kernels.cl";
+    const char* PROGRAM_FILE ="F:/QT/Slicer/kernels.cl";
     const char* KERNEL_FUNC ="cap";
 
     /* OpenCL data structures */
@@ -134,16 +134,16 @@ cl_program OpenCL::build_program(cl_context ctx, cl_device_id dev, const char* f
    return program;
 }
 
-void OpenCL::executeKernel(float *interSection1,float *interSection2,float *result,int LAYERNUMBER,int LINESNUMBER ,float *zheight)
+void OpenCL::executeKernel(float *interSection1,float *interSection2,float *result,int lineNum,float zheight)
 {
 
     int err;
     cl_event ev;
     /* Create a buffer to hold data */
-    cl_mem buf1 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*LINESNUMBER *3*sizeof(float),interSection1, &err);
-    cl_mem buf2 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*LINESNUMBER *3*sizeof(float),interSection2, &err);
-    cl_mem clz = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*sizeof(float),zheight, &err);
-    cl_mem clbuf = clCreateBuffer(context, CL_MEM_WRITE_ONLY, LAYERNUMBER*LINESNUMBER *3*sizeof(float), NULL, &err);
+    cl_mem buf1 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,lineNum *3*sizeof(float),interSection1, &err);
+    cl_mem buf2 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,lineNum *3*sizeof(float),interSection2, &err);
+    cl_mem clz = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,sizeof(float),&zheight, &err);
+    cl_mem clbuf = clCreateBuffer(context, CL_MEM_WRITE_ONLY, lineNum *3*sizeof(float), NULL, &err);
     if(err < 0) {
        perror("Couldn't create buffer!");
        exit(1);
@@ -155,11 +155,11 @@ void OpenCL::executeKernel(float *interSection1,float *interSection2,float *resu
     clSetKernelArg(cap, 2, sizeof(cl_mem), &clbuf);
     clSetKernelArg(cap, 3, sizeof(cl_mem), &clz);
 
-    size_t globalSize[3] ={LAYERNUMBER,LINESNUMBER,3};
-    size_t localSize [3] ={4,16,3};
-    err=clEnqueueNDRangeKernel(queue, cap, 3, NULL, globalSize,NULL, 0, NULL, &ev);
+    size_t globalSize[2] ={size_t(lineNum),3};
+    size_t localSize [2] ={64,3};
+    err=clEnqueueNDRangeKernel(queue, cap, 2, NULL, globalSize,localSize, 0, NULL, &ev);
     clFinish(queue);
-    err = clEnqueueReadBuffer(queue, clbuf, CL_TRUE, 0,LAYERNUMBER*LINESNUMBER *3* sizeof(float), result, 0, NULL, NULL);
+    err = clEnqueueReadBuffer(queue, clbuf, CL_TRUE, 0,lineNum *3* sizeof(float), result, 0, NULL, NULL);
     if(err < 0) {
        perror("Couldn't enqueue the read buffer command");
        exit(1);

@@ -21,6 +21,7 @@ private:
 
 private:
     bool ReadASCII(const char *cfilename);
+    bool MyReadASCII(const char *buf);
     bool ReadBinary(const char *cfilename);
     int addPoint(QString key,Point point);
 

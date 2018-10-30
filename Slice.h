@@ -36,9 +36,7 @@ private:
     QTime time;
     Polylines polylines;
     Intredges intredges;
-    vector<Intredges> sliceedges;
     float zheight;
-    vector<float>z;
     int linesnumber;
     Mesh::Property_map<Mesh::face_index,int>isSliced;
 
