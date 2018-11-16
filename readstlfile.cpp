@@ -3,59 +3,76 @@
 #include <string>
 #include <sstream>
 #include <QDebug>
-#include <QFile>
 #include <QtCore/qmath.h>
 #include <QProgressDialog>
 #include <QMessageBox>
 #include"readstlfile.h"
 
 using namespace std;
-
 bool ReadSTLFile::ReadStlFile(const QString filename)
 {
-    QFile file(filename);
+    normalList.clear();//清空vector
+    dataset.mesh.clear();
+    file.setFileName(filename);
     uchar* buffer;
-
+    int headoffset;
     if(file.open(QIODevice::ReadOnly))
     {
-        buffer=file.map(0,file.size());
-    }
-    if(buffer)
-    {
-        if (buffer[0]=='s')//判断格式
+        QByteArray line = file.readLine();
+        string header(line);
+        headoffset=line.size();
+        uint index=header.find("solid");
+        if(index!=string::npos)
         {
-            qDebug()<<"File is ASCII";
-            normalList.clear();//清空vector
-            dataset.mesh.clear();
-            //ReadASCII((char*)buffer);
-            if(MyReadASCII((char*)buffer))
+            cout<<"File is ASCII"<<endl;
+            qDebug() <<"内存大小："<< file.size()/1048576<<"M";
+            buffer=file.map(0,file.size());
+            if(buffer)
             {
-                file.unmap(buffer);
-                file.close();
-                return true;
+                if(ReadASCII((char*)buffer))
+                {
+                    file.unmap(buffer);
+                    file.close();
+                    return true;
+                }
+                else
+                {
+                    file.unmap(buffer);
+                    file.close();
+                    return false;
+                }
             }
             else
             {
-                file.unmap(buffer);
-                file.close();
+                cout<<"out of memory error"<<endl;
                 return false;
             }
+
         }
         else
         {
-            qDebug()<<"File is Binary";
-            normalList.clear();//清空vector
-            dataset.mesh.clear();
-            if(ReadBinary((char*)buffer))
+            cout<<"File is Binary"<<endl;
+            qDebug() <<"内存大小："<< file.size()/1048576<<"M";
+            buffer=file.map(0,file.size());
+            if(buffer)
             {
-                file.unmap(buffer);
-                file.close();
-                return true;
+
+                if(ReadBinary((char*)buffer))
+                {
+                    file.unmap(buffer);
+                    file.close();
+                    return true;
+                }
+                else
+                {
+                    file.unmap(buffer);
+                    file.close();
+                    return false;
+                }
             }
             else
             {
-                file.unmap(buffer);
-                file.close();
+                cout<<"out of memory error"<<endl;
                 return false;
             }
         }
@@ -63,62 +80,9 @@ bool ReadSTLFile::ReadStlFile(const QString filename)
     }
     else
     {
-        cout<<"out of memory error"<<endl;
+        qDebug()<<"cann't open the file:"<<filename<<endl;
         return false;
     }
-}
-
-bool ReadSTLFile::ReadASCII(const char *buffer)
-{
-    numberVertices=0;
-    numberTriangles = 0;
-    float x, y, z;
-    int index;
-    int point[3];
-    string name, useless;
-    stringstream ss(buffer);
-    getline(ss, name);//文件路径及文件名
-    ss.get();
-    //读取面片
-    do {
-        ss >> useless;//facet
-        if (useless != "facet")
-            break;
-        ss >> useless >> x >> y >>z;//法向量
-        normalList.push_back(Point(x, y, z));
-        getline(ss, useless);
-        getline(ss, useless);//outer loop
-        for (int i = 0; i < 3; i++)
-        {
-            ss >> useless >> x >> y >> z;
-            //cout<<x<<" "<<y<<" "<<z<<endl;
-            QString strx = QString::number(sqrt(qAbs(x)), 'f', 8);
-            QString stry = QString::number(sqrt(qAbs(y)), 'f', 8);
-            QString strz = QString::number(sqrt(qAbs(z)), 'f', 8);
-            //qDebug()<<strx<<" "<<stry<<" "<<strz;
-            strx=strx.replace(".","");
-            stry=stry.replace(".","");
-            strz=strz.replace(".","");
-            if(x>0)strx="1"+strx.left(8);
-            else   strx="0"+strx.left(8);
-            if(y>0)stry="1"+stry.left(8);
-            else   stry="0"+stry.left(8);
-            if(z>0)strz="1"+strz.left(8);
-            else   strz="0"+strz.left(8);
-            QString key="1"+strx+stry+strz;
-            index=addPoint(key,Point(x,y,z));
-            point[i]=index;
-        }
-        Mesh::Vertex_index vx(point[0]);
-        Mesh::Vertex_index vy(point[1]);
-        Mesh::Vertex_index vz(point[2]);
-        dataset.mesh.add_face(vx,vy,vz);
-        numberTriangles++;
-        getline(ss, useless);//空行
-        getline(ss, useless);//end loop
-        getline(ss, useless);//end facet
-    } while (1);
-    return true;
 }
 
 bool ReadSTLFile::ReadBinary(const char *buffer)
@@ -201,7 +165,7 @@ int ReadSTLFile::addPoint(QString key,Point point){
     return index;
 }
 
-bool ReadSTLFile::MyReadASCII(const char *buf)
+bool ReadSTLFile::ReadASCII(const char *buf)
 {
 //    int size=strlen(buf);
 //    QProgressDialog *progressDlg=new QProgressDialog();
@@ -278,3 +242,5 @@ bool ReadSTLFile::MyReadASCII(const char *buf)
     //progressDlg->close();
     return true;
 }
+
+

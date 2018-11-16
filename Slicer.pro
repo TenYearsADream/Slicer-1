@@ -43,20 +43,30 @@ windows {
      DEFINES *= Q_COMPILER_INITIALIZER_LISTS
 }
 
-INCLUDEPATH += D:/Qt/CGAL-4.11/include
-INCLUDEPATH += D:/Qt/CGAL-4.11/auxiliary/gmp/include
-INCLUDEPATH += D:/Qt/CGAL/include
 INCLUDEPATH += D:/Qt/boost_1_59_0
+INCLUDEPATH += 'D:/Qt/OpenCL/sdk/include'
 
-win32: LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL.dll
-win32: LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_ImageIO.dll
-win32: LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Core.dll
-win32: LIBS += -LD:/Qt/CGAL-4.11/auxiliary/gmp/lib/ -llibgmp-10
+LIBS += -LD:/Qt/boost_1_59_0/stage/lib/ -llibboost_system-mgw73-mt-1_59
+LIBS += -LD:/Qt/boost_1_59_0/stage/lib/ -llibboost_thread-mgw73-mt-1_59
+INCLUDEPATH += D:/Qt/CGAL-4.11_64bit/include
+INCLUDEPATH += D:/Qt/CGAL-4.11_64bit/auxiliary/gmp/include
+INCLUDEPATH += D:/Qt/CGAL_64bit/include
 
-QMAKE_CXXFLAGS += -Wno-unused-parameter
-QMAKE_CXXFLAGS += -Wno-unused-variable
+LIBS += -LD:/Qt/CGAL_64bit/lib/ -llibCGAL
+LIBS += -LD:/Qt/CGAL_64bit/lib/ -llibCGAL_ImageIO
+LIBS += -LD:/Qt/CGAL_64bit/lib/ -llibCGAL_Core
+LIBS += -LD:/Qt/CGAL-4.11_64bit/auxiliary/gmp/lib/ -llibgmp-10
+LIBS += -L'D:/Qt/OpenCL/sdk/lib/x64' -lOpenCL
 
-win32: LIBS += -L'C:/Program Files (x86)/AMD APP/lib/x86/' -lOpenCL
+#INCLUDEPATH += D:/Qt/CGAL-4.11/include
+#INCLUDEPATH += D:/Qt/CGAL-4.11/auxiliary/gmp/include
+#INCLUDEPATH += D:/Qt/CGAL/include
 
-INCLUDEPATH += 'C:/Program Files (x86)/AMD APP/include'
-DEPENDPATH += 'C:/Program Files (x86)/AMD APP/include'
+#LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL
+#LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_ImageIO
+#LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Core
+#LIBS += -LD:/Qt/CGAL-4.11/auxiliary/gmp/lib/ -llibgmp-10
+#LIBS += -L'D:/Qt/OpenCL/sdk/lib/x86' -lOpenCL
+
+#LIBS += -LD:/Qt/boost_1_59_0/stage/lib32/ -llibboost_system-mgw53-mt-1_59
+#LIBS += -LD:/Qt/boost_1_59_0/stage/lib32/ -llibboost_thread-mgw53-mt-1_59

@@ -18,6 +18,7 @@ typedef list<Lines> Polylines;
 
 typedef vector<boost::any> Outline;
 typedef list<Outline> Intredges;
+
 class Slice
 {
 public:
@@ -25,28 +26,31 @@ public:
     ~Slice();
     vector<Polylines> intrpoints;
     double thick;
-    int layernumber;
+    size_t layernumber;
     bool isAdapt;
     bool isParaComp;
 public:
     void startSlice(Mesh mesh,double zmin,double zmax);
 
 private:
-    Lines lines;
     QTime time;
+
+    Lines lines;
     Polylines polylines;
     Intredges intredges;
+
     float zheight;
-    int linesnumber;
-    Mesh::Property_map<Mesh::face_index,int>isSliced;
+    vector<float>z;
+    unsigned long long linesnumber;
 
-    int findtime,comptime;
-
+    int findtime,comptime,sorttime;
     OpenCL opencl;
 
 private:
     float adaptSlice(Mesh mesh,Intredges intredges);
-
+    void sliceByHeight(Mesh mesh,double zmin,double zmax);
+    void sliceByEdge(Mesh mesh,double zmin,double zmax);
+    void sliceByGpu(Mesh mesh,double zmin,double zmax);
 };
 
 #endif // SLICE_H

@@ -15,13 +15,15 @@ OpenCL::~OpenCL()
     clReleaseCommandQueue(queue);
     clReleaseProgram(program);
     clReleaseContext(context);
-    clReleaseKernel(cap);
+    clReleaseKernel(capbyheight);
+    clReleaseKernel(capbyedge);
 }
 
 void OpenCL::initOpencl()
 {
     const char* PROGRAM_FILE ="F:/QT/Slicer/kernels.cl";
-    const char* KERNEL_FUNC ="cap";
+    const char* CAPBYHEIGHT ="capbyheight";
+    const char* CAPBYEDGE ="capbyedge";
 
     /* OpenCL data structures */
     int  err;
@@ -35,7 +37,8 @@ void OpenCL::initOpencl()
 
     /* Build the program and create a kernel */
     program = build_program(context, device, PROGRAM_FILE);
-    cap=clCreateKernel(program, KERNEL_FUNC, &err);
+    capbyheight=clCreateKernel(program, CAPBYHEIGHT, &err);
+    capbyedge=clCreateKernel(program, CAPBYEDGE, &err);
     if(err < 0) {
        perror("Couldn't create a kernel");
        exit(1);
@@ -54,7 +57,7 @@ cl_device_id OpenCL::create_device() {
    cl_uint err,num,num_devices;
    char name_data[48];
 
-   err = clGetPlatformIDs(0, 0, &num);
+   err = clGetPlatformIDs(0,NULL, &num);
    /* Identify a platform */
    vector<cl_platform_id> platforms(num);
    err = clGetPlatformIDs(num, &platforms[0], &num);
@@ -65,7 +68,7 @@ cl_device_id OpenCL::create_device() {
 
    /* Access a device */
    err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU,0,NULL, &num_devices);
-   //cout<<"The number of devices:"<<num_devices<<endl;
+   cout<<"The number of devices:"<<num_devices<<endl;
    if(err == CL_DEVICE_NOT_FOUND) {
        cout<<"Couldn't find and GPU,use CPU instead!"<<endl;
        err = clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_CPU, 1, &dev, NULL);
@@ -78,7 +81,7 @@ cl_device_id OpenCL::create_device() {
    clGetDeviceIDs(platforms[0], CL_DEVICE_TYPE_GPU,num_devices, devices, NULL);
    for(int i=0; i<num_devices; i++) {
        err = clGetDeviceInfo(devices[i], CL_DEVICE_NAME,sizeof(name_data), name_data, NULL);
-       //cout<<"Name:"<<name_data<<endl;
+       cout<<"Name:"<<name_data<<endl;
    }
    return devices[0];
 }
@@ -150,14 +153,18 @@ void OpenCL::executeKernel(float *interSection1,float *interSection2,float *resu
     };
 
     /* Create kernel argument */
-    clSetKernelArg(cap, 0, sizeof(cl_mem), &buf1);
-    clSetKernelArg(cap, 1, sizeof(cl_mem), &buf2);
-    clSetKernelArg(cap, 2, sizeof(cl_mem), &clbuf);
-    clSetKernelArg(cap, 3, sizeof(cl_mem), &clz);
+    clSetKernelArg(capbyheight, 0, sizeof(cl_mem), &buf1);
+    clSetKernelArg(capbyheight, 1, sizeof(cl_mem), &buf2);
+    clSetKernelArg(capbyheight, 2, sizeof(cl_mem), &clbuf);
+    clSetKernelArg(capbyheight, 3, sizeof(cl_mem), &clz);
 
     size_t globalSize[2] ={size_t(lineNum),3};
-    size_t localSize [2] ={64,3};
-    err=clEnqueueNDRangeKernel(queue, cap, 2, NULL, globalSize,localSize, 0, NULL, &ev);
+    size_t localSize[2]={0,3};
+    if(lineNum<64)
+        localSize[0] =lineNum;
+    else
+        localSize[0] = 64;
+    err=clEnqueueNDRangeKernel(queue, capbyheight, 2, NULL, globalSize,NULL, 0, NULL, &ev);
     clFinish(queue);
     err = clEnqueueReadBuffer(queue, clbuf, CL_TRUE, 0,lineNum *3* sizeof(float), result, 0, NULL, NULL);
     if(err < 0) {
@@ -178,3 +185,42 @@ void OpenCL::executeKernel(float *interSection1,float *interSection2,float *resu
     clReleaseMemObject(clz);
     clReleaseEvent(ev);
 }
+
+void OpenCL::executeKernel(float *interSection1,float *interSection2,float *result,size_t LAYERNUMBER,size_t LINESNUMBER ,float *zheight)
+ {
+
+     int err;
+     cl_event ev;
+     /* Create a buffer to hold data */
+     cl_mem buf1 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*LINESNUMBER *3*sizeof(float),interSection1, &err);
+     cl_mem buf2 = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*LINESNUMBER *3*sizeof(float),interSection2, &err);
+     cl_mem clz = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*sizeof(float),zheight, &err);
+     cl_mem clbuf = clCreateBuffer(context, CL_MEM_WRITE_ONLY, LAYERNUMBER*LINESNUMBER *3*sizeof(float), NULL, &err);
+     if(err < 0) {
+        perror("Couldn't create buffer!");
+        exit(1);
+     };
+
+     /* Create kernel argument */
+     clSetKernelArg(capbyedge, 0, sizeof(cl_mem), &buf1);
+     clSetKernelArg(capbyedge, 1, sizeof(cl_mem), &buf2);
+     clSetKernelArg(capbyedge, 2, sizeof(cl_mem), &clbuf);
+     clSetKernelArg(capbyedge, 3, sizeof(cl_mem), &clz);
+
+     size_t globalSize[3] ={LAYERNUMBER,LINESNUMBER,3};
+     size_t localSize [3] ={4,16,3};
+     err=clEnqueueNDRangeKernel(queue, capbyedge, 3, NULL, globalSize,NULL, 0, NULL, &ev);
+     clFinish(queue);
+     err = clEnqueueReadBuffer(queue, clbuf, CL_TRUE, 0,LAYERNUMBER*LINESNUMBER *3* sizeof(float), result, 0, NULL, NULL);
+     if(err < 0) {
+        perror("Couldn't enqueue the read buffer command");
+        exit(1);
+     }
+
+     /* Deallocate resources */
+     clReleaseMemObject(buf1);
+     clReleaseMemObject(buf2);
+     clReleaseMemObject(clbuf);
+     clReleaseMemObject(clz);
+     clReleaseEvent(ev);
+ }
