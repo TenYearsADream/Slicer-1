@@ -29,7 +29,7 @@ Slice::~Slice()
 
 }
 
-void Slice::startSlice(Mesh mesh,double zmin,double zmax)
+void Slice::startSlice(Mesh mesh,float zmin,float zmax)
 {  
     findtime=0;
     comptime=0;
@@ -42,9 +42,9 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
     //    progressDlg->setLabelText("正在切片......");
     //    progressDlg->setRange(zmin,zmax);
 
-    //sliceByHeight(mesh,zmin,zmax);
+    sliceByHeight(mesh,zmin,zmax);
 
-    sliceByEdge(mesh,zmin,zmax);
+    //sliceByEdge(mesh,zmin,zmax);
     if(isParaComp)
     {
         cout<<"find edge time:"<<findtime<<"ms"<<endl;
@@ -59,6 +59,14 @@ void Slice::startSlice(Mesh mesh,double zmin,double zmax)
         //cout<<"time of cpu computing:"<<time.elapsed()<<"ms"<<endl;
     }
     //progressDlg->close();
+}
+
+void Slice::startSlice(vector<Vertex> vertexset,multimap<float,Edge>edgeset,vector<Face> faceset,float zmin,float zmax)
+{
+    sliceByGpu(vertexset,edgeset,faceset,zmin,zmax);
+    cout<<"find edge time:"<<findtime<<"ms"<<endl;
+    cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
+    cout<<"gpu compute time:"<<comptime<<"ms"<<endl;
 }
 
 float Slice::adaptSlice(Mesh mesh,Intredges intredges)
@@ -108,15 +116,15 @@ float Slice::adaptSlice(Mesh mesh,Intredges intredges)
     return minangle;
 }
 
-void Slice::sliceByEdge(Mesh mesh,double zmin,double zmax)
+void Slice::sliceByEdge(Mesh mesh,float zmin,float zmax)
 {
     vector<vector<Mesh::Edge_index>> edges;
     z.clear();
     intrpoints.clear();
     edges.clear();
-    zheight=float(zmin);
+    zheight=zmin;
     layernumber=0;
-    while(zheight<=float(zmax))
+    while(zheight<=zmax)
     {
         z.push_back(zheight);
         zheight += thick;
@@ -244,7 +252,7 @@ void Slice::sliceByEdge(Mesh mesh,double zmin,double zmax)
     comptime +=time.elapsed();
 }
 
-void Slice::sliceByHeight(Mesh mesh,double zmin,double zmax)
+void Slice::sliceByHeight(Mesh mesh,float zmin,float zmax)
 {
     QFile file("C:/Users/魏超/Desktop/edges.txt");
     if(!file.open(QIODevice::ReadWrite|QIODevice::Text))
@@ -255,8 +263,8 @@ void Slice::sliceByHeight(Mesh mesh,double zmin,double zmax)
     layernumber=0;
     intrpoints.clear();
     CGAL::Polygon_mesh_slicer<Mesh, Kernel> slicer(mesh);
-    zheight=float(zmin);
-    while(zheight<=float(zmax))
+    zheight=zmin;
+    while(zheight<=zmax)
     {
 //        progressDlg->setValue(zheight);
 //        if(progressDlg->wasCanceled())
@@ -444,7 +452,163 @@ void Slice::sliceByHeight(Mesh mesh,double zmin,double zmax)
     file.close();
 }
 
-void Slice::sliceByGpu(Mesh mesh,double zmin,double zmax)
+void Slice::sliceByGpu(vector<Vertex> vertexset,multimap<float,Edge>edgeset,vector<Face> faceset,float zmin,float zmax)
 {
-    cout<<zmin<<zmax<<endl;
+    findtime=0;
+    comptime=0;
+    sorttime=0;
+    vector<vector<pair<Point,Point>>> edges;
+    vector<vector<uint>> faces;
+    vector<vector<vector<uint>>> location;
+    z.clear();
+    intrpoints.clear();
+    edges.clear();
+    zheight=zmin;
+    layernumber=0;
+    while(zheight<=zmax)
+    {
+        z.push_back(zheight);
+        zheight += thick;
+        layernumber++;
+    }
+    edges.resize(layernumber);
+    faces.resize(layernumber);
+    location.reserve(layernumber);
+    time.start();
+    for(multimap<float,Edge>::const_iterator it=edgeset.begin();it!=edgeset.end();it++)
+    {
+
+        Point p1=vertexset[it->second.v0].point;
+        Point p2=vertexset[it->second.v1].point;
+        //cout<<it->first<<":"<<it->second.id<<" "<<p1<<" "<<p2<<endl;
+        float z1=it->second.zmin;
+        float z2=it->second.zmax;
+        vector<float>::iterator location_index=find_if(z.begin(),z.end(),bind2nd(greater<float>(),z1));
+        size_t num1=size_t(location_index-z.begin());
+        location_index=find_if(z.begin(),z.end(),bind2nd(greater<float>(),z2));
+        size_t num2=size_t(location_index-z.begin())-1;
+        for(size_t i=num1;i<=num2;i++)
+        {
+            edges[i].push_back(make_pair(p1,p2));
+            faces[i].push_back(it->second.f);
+        }
+    }
+    findtime =time.elapsed();
+
+    time.restart();
+    vector<size_t> size;
+    size.reserve(edges.size());
+    for(size_t i=0;i<edges.size();i++)
+    {
+        vector<vector<uint>>locs;
+        vector<uint> face,loc;
+        vector<uint>::iterator it;
+        uint index,num=0;
+        //cout<<"The "<<i<<" layer:"<<edges[i].size()/2<<endl;
+        if(edges[i].empty())
+        {
+            locs.push_back(loc);
+            location.push_back(locs);
+            continue;
+        }
+        size.push_back(edges[i].size());
+
+        while(num<faces[i].size()/2)
+        {
+            face.clear();
+            loc.clear();
+            it=find_if(faces[i].begin(),faces[i].end(),bind2nd(not_equal_to<uint>(),INT_MAX));
+            index=uint(it-faces[i].begin());
+            face.push_back(faces[i][index]);
+            loc.push_back(index);
+            faces[i][index]=INT_MAX;
+            faces[i][index+1]=INT_MAX;
+            while(1)
+            {
+                it=find(faces[i].begin(),faces[i].end(),face.back());
+                if(it==faces[i].end())
+                {
+                    break;
+                }
+                index=uint(it-faces[i].begin());
+                faces[i][index]=INT_MAX;
+                if((index & 1) == 0)
+                {
+                    loc.push_back(index+1);
+                    face.push_back(faces[i][index+1]);
+                    faces[i][index+1]=INT_MAX;
+                }
+                else
+                {
+                    loc.push_back(index-1);
+                    face.push_back(faces[i][index-1]);
+                    faces[i][index-1]=INT_MAX;
+                }
+            };
+            locs.push_back(loc);
+            num +=loc.size();
+        }
+        location.push_back(locs);
+
+//        vector<pair<Point,Point>>edge;
+//        edge.reserve(lines.size());
+//        for(size_t j=0;j<loc.size();j++)
+//        {
+//            edge.push_back(edges[i][loc[j]]);
+//        }
+//        edges[i]=edge;
+
+//        for(size_t j=0;j<edges[i].size();j++)
+//        {
+//            cout<<edges[i][j].first<<" "<<edges[i][j].second<<" "<<lines[j]<<endl;
+//        }
+//        cout<<endl;
+    }
+    sorttime =time.elapsed();
+
+    time.restart();
+    linesnumber=*max_element(size.begin(),size.end());
+    float *interSection1,*interSection2,*result;
+    interSection1 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
+    interSection2 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
+    result = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
+
+    for(size_t i=0;i<layernumber;i++)
+    {
+        for(size_t j=0;j<edges[i].size();j++)
+        {
+            Point p1=edges[i][j].first;
+            Point p2=edges[i][j].second;
+            interSection1[i*3*linesnumber+3*j+0]=float(p1.x());
+            interSection1[i*3*linesnumber+3*j+1]=float(p1.y());
+            interSection1[i*3*linesnumber+3*j+2]=float(p1.z());
+            interSection2[i*3*linesnumber+3*j+0]=float(p2.x());
+            interSection2[i*3*linesnumber+3*j+1]=float(p2.y());
+            interSection2[i*3*linesnumber+3*j+2]=float(p2.z());
+        }
+    }
+    opencl.executeKernel(interSection1,interSection2,result,layernumber,linesnumber,z.data());
+    for(size_t i=0;i<layernumber;i++)
+    {
+        polylines.clear();
+        //cout<<"The "<<i<<" layer:"<<edges[i].size()/2<<endl;
+        for(size_t j=0;j<location[i].size();j++)
+        {
+            lines.clear();
+            for(size_t k=0;k<location[i][j].size();k++)
+            {
+                //cout<<location[i][j][k]<<endl;
+                float x=result[i*3*linesnumber+3*(location[i][j][k])+0];
+                float y=result[i*3*linesnumber+3*(location[i][j][k])+1];
+                lines.push_back(Point(x,y,z[i]));
+                //cout<<x<<" "<<y<<" "<<z[i]<<endl;
+            }
+            polylines.push_back(lines);
+        }
+        intrpoints.push_back(polylines);
+    }
+    free(interSection1);
+    free(interSection2);
+    free(result);
+    comptime +=time.elapsed();
 }

@@ -8,6 +8,7 @@
 #include <CL/cl.h>
 #include <boost/any.hpp>
 #include "opencl.h"
+#include "dataset.h"
 using namespace std;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
@@ -30,7 +31,8 @@ public:
     bool isAdapt;
     bool isParaComp;
 public:
-    void startSlice(Mesh mesh,double zmin,double zmax);
+    void startSlice(Mesh mesh,float zmin,float zmax);
+    void startSlice(vector<Vertex> vertexset,multimap<float,Edge>edgeset,vector<Face> faceset,float zmin,float zmax);
 
 private:
     QTime time;
@@ -48,9 +50,9 @@ private:
 
 private:
     float adaptSlice(Mesh mesh,Intredges intredges);
-    void sliceByHeight(Mesh mesh,double zmin,double zmax);
-    void sliceByEdge(Mesh mesh,double zmin,double zmax);
-    void sliceByGpu(Mesh mesh,double zmin,double zmax);
+    void sliceByHeight(Mesh mesh,float zmin,float zmax);
+    void sliceByEdge(Mesh mesh,float zmin,float zmax);
+    void sliceByGpu(vector<Vertex> vertexset,multimap<float,Edge>edgeset,vector<Face> faceset,float zmin,float zmax);
 };
 
 #endif // SLICE_H
