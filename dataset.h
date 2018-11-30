@@ -49,6 +49,7 @@ public:
         vector<Vertex> vertexset;
         multimap<float,Edge>edgeset;
         vector<Face> faceset;
+        vector<float> halfedge;
 private:
 
 };

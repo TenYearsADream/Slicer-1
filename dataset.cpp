@@ -78,11 +78,11 @@ void dataSet::rotateModel(int x,int y,int z)
     mesh.clear();
     vertices.clear();
     vector<float>X,Y,Z;
-    for(int i=0;i<points.size();i++)
+    for(size_t i=0;i<points.size();i++)
     {
-        vertices.push_back(points[i].x());
-        vertices.push_back(points[i].y());
-        vertices.push_back(points[i].z());
+        vertices.push_back(float(points[i].x()));
+        vertices.push_back(float(points[i].y()));
+        vertices.push_back(float(points[i].z()));
         X.push_back(points[i].x());
         Y.push_back(points[i].y());
         Z.push_back(points[i].z());
@@ -106,41 +106,57 @@ void dataSet::rotateModel(int x,int y,int z)
 
 void dataSet::halfedgeOnGpu()
 {
-    for(Mesh::Vertex_index vi:mesh.vertices())
-    {
-        Vertex v;
-        v.point=mesh.point(vi);
-        vertexset.push_back(v);
-    }
+//    for(Mesh::Vertex_index vi:mesh.vertices())
+//    {
+//        Vertex v;
+//        v.point=mesh.point(vi);
+//        vertexset.push_back(v);
+//    }
 
-    for(Mesh::Face_index fi:mesh.faces())
-    {
-        Mesh::Halfedge_index e0,e1,e2;
-        e0=mesh.halfedge(fi);
-        e1=mesh.next(e0);
-        e2=mesh.next(e1);
-        //cout<<fi<<" "<<e0<<" "<<e1<<" "<<e2<<endl;
-        Face f;
-        f.e0=e0;
-        f.e1=e1;
-        f.e2=e2;
-        faceset.push_back(f);
-    }
+//    for(Mesh::Face_index fi:mesh.faces())
+//    {
+//        Mesh::Halfedge_index e0,e1,e2;
+//        e0=mesh.halfedge(fi);
+//        e1=mesh.next(e0);
+//        e2=mesh.next(e1);
+//        //cout<<fi<<" "<<e0<<" "<<e1<<" "<<e2<<endl;
+//        Face f;
+//        f.e0=e0;
+//        f.e1=e1;
+//        f.e2=e2;
+//        faceset.push_back(f);
+//    }
+//    for(Mesh::Halfedge_index hi:mesh.halfedges())
+//    {
+//        Mesh::Halfedge_index hpre=mesh.prev(hi);
+//        Mesh::Halfedge_index hnext=mesh.next(hi);
+//        Mesh::Halfedge_index hopposite=mesh.opposite(hi);
+//        Mesh::Vertex_index vertex0=mesh.vertex(mesh.edge(hi),0);
+//        Mesh::Vertex_index vertex1=mesh.vertex(mesh.edge(hi),1);
+//        Mesh::Face_index f=mesh.face(hi);
+//        Point p1=mesh.point(vertex0);
+//        Point p2=mesh.point(vertex1);
+//        float zmin=float(qMin(p1.z(),p2.z()));
+//        float zmax=float(qMax(p1.z(),p2.z()));
+//        //cout<<zmax<<" "<<zmin<<" "<<hi<<" "<<vertex0<<" "<<vertex1<<" "<<hpre<<" "<<hnext<<" "<<hopposite<<" "<<f<<endl;
+//        Edge e={zmax,zmin,vertex0,vertex1,hpre,hnext,hopposite,hi,f};
+//        edgeset.insert(make_pair(zmax,e));
+//    }
+    halfedge.clear();
     for(Mesh::Halfedge_index hi:mesh.halfedges())
     {
-        Mesh::Halfedge_index hpre=mesh.prev(hi);
-        Mesh::Halfedge_index hnext=mesh.next(hi);
-        Mesh::Halfedge_index hopposite=mesh.opposite(hi);
         Mesh::Vertex_index vertex0=mesh.vertex(mesh.edge(hi),0);
         Mesh::Vertex_index vertex1=mesh.vertex(mesh.edge(hi),1);
         Mesh::Face_index f=mesh.face(hi);
         Point p1=mesh.point(vertex0);
         Point p2=mesh.point(vertex1);
-        float zmin=float(qMin(p1.z(),p2.z()));
-        float zmax=float(qMax(p1.z(),p2.z()));
-        //cout<<zmax<<" "<<zmin<<" "<<hi<<" "<<vertex0<<" "<<vertex1<<" "<<hpre<<" "<<hnext<<" "<<hopposite<<" "<<f<<endl;
-        Edge e={zmax,zmin,vertex0,vertex1,hpre,hnext,hopposite,hi,f};
-        edgeset.insert(make_pair(zmax,e));
+        halfedge.push_back(float(p1.x()));
+        halfedge.push_back(float(p1.y()));
+        halfedge.push_back(float(p1.z()));
+        halfedge.push_back(float(p2.x()));
+        halfedge.push_back(float(p2.y()));
+        halfedge.push_back(float(p2.z()));
+        halfedge.push_back(float(f));
     }
 }
 

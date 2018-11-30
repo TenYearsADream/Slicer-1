@@ -11,20 +11,20 @@ class ReadSTLFile
 {
 public:
     unsigned int numberTriangles;
-    int numberVertices;
+    uint numberVertices;
     vector<Point> normalList;
-    dataSet dataset;
+    //dataSet dataset;
 public:
-    bool ReadStlFile(const QString filename);
+    bool ReadStlFile(const QString filename,dataSet &dataset);
 private:
-    QHash<QString,int> verticesmap;
+    QHash<QString,uint> verticesmap;
     char* memwriter;
     QFile file;
 
 private:
-    bool ReadASCII(const char *buf);
-    bool ReadBinary(const char *cfilename);
-    int addPoint(QString key,Point point);
+    bool ReadASCII(const char *buf,dataSet &dataset);
+    bool ReadBinary(const char *cfilename,dataSet &dataset);
+    uint addPoint(QString key,Point point,dataSet &dataset);
 
     int cpyint(const char*& p);
     float cpyfloat(const char*& p);

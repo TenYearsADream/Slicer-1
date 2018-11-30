@@ -9,7 +9,7 @@
 #include"readstlfile.h"
 
 using namespace std;
-bool ReadSTLFile::ReadStlFile(const QString filename)
+bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
 {
     normalList.clear();//清空vector
     dataset.mesh.clear();
@@ -29,7 +29,7 @@ bool ReadSTLFile::ReadStlFile(const QString filename)
             buffer=file.map(0,file.size());
             if(buffer)
             {
-                if(ReadASCII((char*)buffer))
+                if(ReadASCII((char*)buffer,dataset))
                 {
                     file.unmap(buffer);
                     file.close();
@@ -57,7 +57,7 @@ bool ReadSTLFile::ReadStlFile(const QString filename)
             if(buffer)
             {
 
-                if(ReadBinary((char*)buffer))
+                if(ReadBinary((char*)buffer,dataset))
                 {
                     file.unmap(buffer);
                     file.close();
@@ -85,7 +85,7 @@ bool ReadSTLFile::ReadStlFile(const QString filename)
     }
 }
 
-bool ReadSTLFile::ReadBinary(const char *buffer)
+bool ReadSTLFile::ReadBinary(const char *buffer,dataSet &dataset)
 {
     const char* p = buffer;
     float x=0,y=0,z=0;
@@ -117,7 +117,7 @@ bool ReadSTLFile::ReadBinary(const char *buffer)
             if(z>0)strz="1"+strz.left(8);
             else   strz="0"+strz.left(6);
             QString key="1"+strx+stry+strz;
-            index=addPoint(key,Point(x,y,z));
+            index=addPoint(key,Point(x,y,z),dataset);
             point[j]=index;
         }
         Mesh::Vertex_index vx(point[0]);
@@ -147,8 +147,8 @@ float ReadSTLFile::cpyfloat(const char*& p)
     return cpy;
 }
 
-int ReadSTLFile::addPoint(QString key,Point point){
-    int index;
+uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
+    uint index;
     auto it = verticesmap.find(key);
     if(it != verticesmap.end())
     {
@@ -157,7 +157,7 @@ int ReadSTLFile::addPoint(QString key,Point point){
     }
     else
     {
-        Mesh::Vertex_index v0=dataset.mesh.add_vertex(point);
+        dataset.mesh.add_vertex(point);
         verticesmap.insert(key,numberVertices);
         index=numberVertices;
         numberVertices++;
@@ -165,7 +165,7 @@ int ReadSTLFile::addPoint(QString key,Point point){
     return index;
 }
 
-bool ReadSTLFile::ReadASCII(const char *buf)
+bool ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
 {
 //    int size=strlen(buf);
 //    QProgressDialog *progressDlg=new QProgressDialog();
@@ -176,13 +176,13 @@ bool ReadSTLFile::ReadASCII(const char *buf)
 //    progressDlg->setLabelText("正在建立拓扑关系......");
 //    progressDlg->setRange(0,size);
 
-    int offset=280;
+    const int offset=280;
     numberVertices=0;
     numberTriangles = 0;
-    float x, y, z;
-    int point[3],index;
+    double x, y, z;
+    uint point[3],index;
     char *buffer=strstr(buf,"facet normal");
-    int namelength=buffer-buf;
+    int namelength=int(buffer-buf);
     char name[namelength];
     strncpy(name,buf,sizeof(name));
     name[namelength]='\0';
@@ -209,28 +209,22 @@ bool ReadSTLFile::ReadASCII(const char *buf)
         for (int i = 0; i < 3; i++)
         {
             ss >> useless >> x >> y >> z;
+            if(qAbs(x)<1e-8)x=0;
+            if(qAbs(y)<1e-8)y=0;
+            if(qAbs(z)<1e-8)z=0;
             //cout<<x<<" "<<y<<" "<<z<<endl;
-            QString strx = QString::number(sqrt(qAbs(x)), 'f', 8);
-            QString stry = QString::number(sqrt(qAbs(y)), 'f', 8);
-            QString strz = QString::number(sqrt(qAbs(z)), 'f', 8);
+            QString strx = QString::number(x, 'f', 15);
+            QString stry = QString::number(y, 'f', 15);
+            QString strz = QString::number(z, 'f', 15);
             //qDebug()<<strx<<" "<<stry<<" "<<strz;
-            strx=strx.replace(".","");
-            stry=stry.replace(".","");
-            strz=strz.replace(".","");
-            if(x>0)strx="1"+strx.left(8);
-            else   strx="0"+strx.left(8);
-            if(y>0)stry="1"+stry.left(8);
-            else   stry="0"+stry.left(8);
-            if(z>0)strz="1"+strz.left(8);
-            else   strz="0"+strz.left(8);
             QString key="1"+strx+stry+strz;
-            index=addPoint(key,Point(x,y,z));
+            index=addPoint(key,Point(x,y,z),dataset);
             point[i]=index;
         }
-        Mesh::Vertex_index vx(point[0]);
-        Mesh::Vertex_index vy(point[1]);
-        Mesh::Vertex_index vz(point[2]);
-        dataset.mesh.add_face(vx,vy,vz);
+        Mesh::Vertex_index v0(point[0]);
+        Mesh::Vertex_index v1(point[1]);
+        Mesh::Vertex_index v2(point[2]);
+        dataset.mesh.add_face(v0,v1,v2);
         getline(ss, useless);//空行
         getline(ss, useless);//end loop
         getline(ss, useless);//end facet
@@ -238,6 +232,7 @@ bool ReadSTLFile::ReadASCII(const char *buf)
         buffer=strstr(buffer,"normal");
         buffer=strstr(buffer,"facet normal");
         numberTriangles++;
+        //cout<<"facenumber:"<<numberTriangles<<" "<<dataset.mesh.num_faces()<<endl;
     }while(buffer!=NULL);
     //progressDlg->close();
     return true;
