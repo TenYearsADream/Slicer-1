@@ -21,26 +21,14 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
         QByteArray line = file.readLine();
         string header(line);
         headoffset=line.size();
-        uint index=header.find("solid");
-        if(index!=string::npos)
+        if(header[0]=='s')
         {
             cout<<"File is ASCII"<<endl;
             qDebug() <<"内存大小："<< file.size()/1048576<<"M";
             buffer=file.map(0,file.size());
             if(buffer)
             {
-                if(ReadASCII((char*)buffer,dataset))
-                {
-                    file.unmap(buffer);
-                    file.close();
-                    return true;
-                }
-                else
-                {
-                    file.unmap(buffer);
-                    file.close();
-                    return false;
-                }
+                ReadASCII((char*)buffer,dataset);
             }
             else
             {
@@ -56,19 +44,7 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
             buffer=file.map(0,file.size());
             if(buffer)
             {
-
-                if(ReadBinary((char*)buffer,dataset))
-                {
-                    file.unmap(buffer);
-                    file.close();
-                    return true;
-                }
-                else
-                {
-                    file.unmap(buffer);
-                    file.close();
-                    return false;
-                }
+                ReadBinary((char*)buffer,dataset);
             }
             else
             {
@@ -76,7 +52,9 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
                 return false;
             }
         }
-
+        file.unmap(buffer);
+        file.close();
+        return true;
     }
     else
     {
@@ -85,38 +63,42 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
     }
 }
 
-bool ReadSTLFile::ReadBinary(const char *buffer,dataSet &dataset)
+void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
 {
-    const char* p = buffer;
     float x=0,y=0,z=0;
-    int index=0;
-    char* name;
-    vector<int> point(3);
-    memcpy(name, p, 80);//80字节文件头
-    //qDebug()<<name<<endl;
-    p += 80;
+    uint index=0;
+    QString strx(" "),stry(" "),strz(" "),key(" ");
+    char name[80];
+    uint *point=new uint[3]();
+    memcpy(name, buffer, 80);//80字节文件头
+    //cout<<name<<endl;
+    buffer += 80;
+    numberTriangles=0;
     numberVertices=0;
-    numberTriangles= cpyint(p);//4字节三角面片个数
+    memcpy(&numberTriangles,buffer,4);//4字节三角面片个数
+    buffer +=4;
     //读取三角形面片
-    for (unsigned int i = 0; i < numberTriangles; i++)
+    for (uint i = 0; i <numberTriangles; i++)
     {
-        normalList.push_back(Point(cpyfloat(p), cpyfloat(p), cpyfloat(p)));//法向量
+        memcpy(&x,buffer, 4);buffer +=4;
+        memcpy(&y,buffer, 4);buffer +=4;
+        memcpy(&z,buffer, 4);buffer +=4;
+        //cout<<x<<" "<<y<<" "<<z<<endl;
+        normalList.push_back(Point(x, y, z));//法向量
         for (int j = 0; j < 3; j++)//读取三顶点
         {
-            x=cpyfloat(p);y=cpyfloat(p);z=cpyfloat(p);
-            QString strx = QString::number(sqrt(qAbs(x)), 'f', 8);
-            QString stry = QString::number(sqrt(qAbs(y)), 'f', 8);
-            QString strz = QString::number(sqrt(qAbs(z)), 'f', 8);
-            strx=strx.replace(".","");
-            stry=stry.replace(".","");
-            strz=strz.replace(".","");
-            if(x>0)strx="1"+strx.left(8);
-            else   strx="0"+strx.left(8);
-            if(y>0)stry="1"+stry.left(8);
-            else   stry="0"+stry.left(8);
-            if(z>0)strz="1"+strz.left(8);
-            else   strz="0"+strz.left(6);
-            QString key="1"+strx+stry+strz;
+            memcpy(&x,buffer, 4);buffer +=4;
+            memcpy(&y,buffer, 4);buffer +=4;
+            memcpy(&z,buffer, 4);buffer +=4;
+            if(qAbs(x)<1e-8f)x=0;
+            if(qAbs(y)<1e-8f)y=0;
+            if(qAbs(z)<1e-8f)z=0;
+            //cout<<x<<" "<<y<<" "<<z<<endl;
+            strx = QString::number(double(x), 10, 8);
+            stry = QString::number(double(y), 10, 8);
+            strz = QString::number(double(z), 10, 8);
+            //qDebug()<<strx<<" "<<stry<<" "<<strz;
+            key="1"+strx+stry+strz;
             index=addPoint(key,Point(x,y,z),dataset);
             point[j]=index;
         }
@@ -124,27 +106,9 @@ bool ReadSTLFile::ReadBinary(const char *buffer,dataSet &dataset)
         Mesh::Vertex_index vy(point[1]);
         Mesh::Vertex_index vz(point[2]);
         dataset.mesh.add_face(vx,vy,vz);
-        p += 2;//跳过尾部标志
+        buffer += 2;//跳过尾部标志
     }
-    return true;
-}
-
-int ReadSTLFile::cpyint(const char*& p)
-{
-    int cpy;
-    memwriter = (char*)&cpy;
-    memcpy(memwriter, p, 4);
-    p += 4;
-    return cpy;
-}
-
-float ReadSTLFile::cpyfloat(const char*& p)
-{
-    float cpy;
-    memwriter = (char*)&cpy;
-    memcpy(memwriter, p, 4);
-        p += 4;
-    return cpy;
+    delete[] point;
 }
 
 uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
@@ -165,7 +129,7 @@ uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
     return index;
 }
 
-bool ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
+void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
 {
 //    int size=strlen(buf);
 //    QProgressDialog *progressDlg=new QProgressDialog();
@@ -179,8 +143,10 @@ bool ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
     const int offset=280;
     numberVertices=0;
     numberTriangles = 0;
-    double x, y, z;
-    uint point[3],index;
+    double x=0, y=0, z=0;
+    QString strx(" "),stry(" "),strz(" "),key(" ");
+    uint index=0;
+    uint *point=new uint[3]();
     char *buffer=strstr(buf,"facet normal");
     int namelength=int(buffer-buf);
     char name[namelength];
@@ -198,7 +164,7 @@ bool ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
 //            return false;
 //        }
         strncpy(facet,buffer,sizeof(facet));
-        facet[offset]='\0';
+        facet[offset-1]='\0';
         //cout<<facet<<endl;
         stringstream ss(facet);
         ss >> useless;//facet
@@ -213,17 +179,18 @@ bool ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
             if(qAbs(y)<1e-8)y=0;
             if(qAbs(z)<1e-8)z=0;
             //cout<<x<<" "<<y<<" "<<z<<endl;
-            QString strx = QString::number(x, 'f', 15);
-            QString stry = QString::number(y, 'f', 15);
-            QString strz = QString::number(z, 'f', 15);
+            strx = QString::number(x, 10, 8);
+            stry = QString::number(y, 10, 8);
+            strz = QString::number(z, 10, 8);
             //qDebug()<<strx<<" "<<stry<<" "<<strz;
-            QString key="1"+strx+stry+strz;
+            key="1"+strx+stry+strz;
             index=addPoint(key,Point(x,y,z),dataset);
             point[i]=index;
         }
         Mesh::Vertex_index v0(point[0]);
         Mesh::Vertex_index v1(point[1]);
         Mesh::Vertex_index v2(point[2]);
+        //cout<<v0<<" "<<v1<<" "<<v2<<endl;
         dataset.mesh.add_face(v0,v1,v2);
         getline(ss, useless);//空行
         getline(ss, useless);//end loop
@@ -234,8 +201,8 @@ bool ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
         numberTriangles++;
         //cout<<"facenumber:"<<numberTriangles<<" "<<dataset.mesh.num_faces()<<endl;
     }while(buffer!=NULL);
+    delete[] point;
     //progressDlg->close();
-    return true;
 }
 
 

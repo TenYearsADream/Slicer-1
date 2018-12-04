@@ -10,22 +10,17 @@ using namespace std;
 class ReadSTLFile
 {
 public:
-    unsigned int numberTriangles;
+    uint numberTriangles;
     uint numberVertices;
     vector<Point> normalList;
-    //dataSet dataset;
 public:
     bool ReadStlFile(const QString filename,dataSet &dataset);
 private:
     QHash<QString,uint> verticesmap;
-    char* memwriter;
     QFile file;
 
 private:
-    bool ReadASCII(const char *buf,dataSet &dataset);
-    bool ReadBinary(const char *cfilename,dataSet &dataset);
+    void ReadASCII(const char *buf,dataSet &dataset);
+    void ReadBinary(char *buf,dataSet &dataset);
     uint addPoint(QString key,Point point,dataSet &dataset);
-
-    int cpyint(const char*& p);
-    float cpyfloat(const char*& p);
 };
