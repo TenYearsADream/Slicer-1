@@ -2,7 +2,7 @@
 #define MYGLWIDGET
 #include <QGLWidget>
 #include <qopenglwidget.h>
-#include <qopenglfunctions>
+#include <QOpenGLFunctions>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
@@ -22,8 +22,8 @@ class MyGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 public:
     explicit MyGLWidget(QWidget *parent = 0);
     ~MyGLWidget();
-    vector<GLushort> indices;
-    vector<GLfloat> vertices;
+    vector<uint> indices;
+    vector<float> vertices;
     vector<Polylines> intrpoints;
     vector <vector<int>> clusterTable;
     GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis

@@ -43,7 +43,7 @@ public:
 public:
         Mesh mesh;
         float surroundBox[6];
-        vector<unsigned short> indices;
+        vector<uint> indices;
         vector<float> vertices;
 
         vector<Vertex> vertexset;

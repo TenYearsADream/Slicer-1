@@ -53,7 +53,7 @@ void Slice::startSlice(Mesh mesh,vector<float> halfedge,float zmin,float zmax)
     else
     {
         //sliceByHeight(mesh,zmin,zmax);
-        sliceByCpu(mesh,zmin,zmax);
+        sliceByCpu(halfedge,zmin,zmax);
         cout<<"find edge time:"<<findtime<<"ms"<<endl;
         cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
         cout<<"cpu compute time:"<<comptime<<"ms"<<endl;
@@ -181,9 +181,9 @@ void Slice::sliceByEdge(Mesh mesh,float zmin,float zmax)
     time.restart();
     size_t linesnumber=*max_element(size.begin(),size.end());
     float *interSection1,*interSection2,*result;
-    interSection1 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
-    interSection2 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
-    result = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
+    interSection1 =new float[layernumber*linesnumber *3];
+    interSection2 =new float[layernumber*linesnumber *3];
+    result =new float[layernumber*linesnumber *3];
 
     for(size_t i=0;i<layernumber;i++)
     {
@@ -223,7 +223,7 @@ void Slice::sliceByEdge(Mesh mesh,float zmin,float zmax)
     comptime +=time.elapsed();
 }
 
-void Slice::sliceByCpu(Mesh mesh,float zmin,float zmax)
+void Slice::sliceByCpu(vector<float> halfedge,float zmin,float zmax)
 {
     intrpoints.clear();
     vector<vector<pair<Point,Point>>> edges;
@@ -239,29 +239,25 @@ void Slice::sliceByCpu(Mesh mesh,float zmin,float zmax)
         zheight += thick;
         layernumber++;
     }
-    edges.resize(layernumber);
-    faces.resize(layernumber);
-    location.reserve(layernumber);
+    edges.resize(layernumber+1);
+    faces.resize(layernumber+1);
+    location.resize(layernumber+1);
     time.start();
-    for(Mesh::Halfedge_index hi:mesh.halfedges())
+    size_t edgenumber=halfedge.size()/7;
+    for(uint i=0;i<edgenumber;i++)
     {
-        Point p1=mesh.point(mesh.source(hi));
-        Point p2=mesh.point(mesh.target(hi));
-        Mesh::Face_index f=mesh.face(hi);
-        float z1=float(qMin(p1.z(),p2.z()));
-        float z2=float(qMax(p1.z(),p2.z()));
-//        vector<float>::iterator location_index=find_if(z.begin(),z.end(),bind2nd(greater<double>(),z1));
-//        size_t num1=size_t(location_index-z.begin());
-//        location_index=find_if(z.begin(),z.end(),bind2nd(greater<double>(),z2));
-//        size_t num2=size_t(location_index-z.begin())-1;
-        size_t num1=size_t((z1-zmin)/thick+1);
-        size_t num2=size_t((z2-zmin)/thick);
-
-        //cout<<num1<<" "<<num2<<" "<<f<<endl;
-        for(size_t i=num1;i<=num2;i++)
+        Point p1=Point(halfedge[7*i+0],halfedge[7*i+1],halfedge[7*i+2]);
+        Point p2=Point(halfedge[7*i+3],halfedge[7*i+4],halfedge[7*i+5]);
+        double z1=qMin(p1.z(),p2.z());
+        double z2=qMax(p1.z(),p2.z());
+        int num1=int(ceil((float(z1)-zmin)/thick));
+        int num2=int((float(z2)-zmin)/thick);
+        if(qAbs(z2-z1)<1e-8)num2=num1-1;
+        //cout<<z1<<" "<<z2<<" "<<num1<<" "<<num2<<endl;
+        for(int j=num1;j<=num2;j++)
         {
-            edges[i].push_back(make_pair(p1,p2));
-            faces[i].push_back(f);
+            edges[size_t(j)].push_back(make_pair(p1,p2));
+            faces[size_t(j)].push_back(uint(halfedge[7*i+6]));
         }
     }
     findtime =time.elapsed();
@@ -270,7 +266,7 @@ void Slice::sliceByCpu(Mesh mesh,float zmin,float zmax)
     size_t linesnumber=0;
     vector<vector<uint>>locs;
     vector<uint> face,loc;
-    uint index,num=0;
+    uint index=0;
     for(uint i=0;i<edges.size();i++)
     {
         //cout<<"The "<<i<<" layer:"<<edges[i].size()<<endl;
@@ -278,7 +274,7 @@ void Slice::sliceByCpu(Mesh mesh,float zmin,float zmax)
         facesmap.clear();
         if(edges[i].empty())
         {
-            location.push_back(locs);
+            location[i]=locs;
             continue;
         }
         if(edges[i].size()>linesnumber)linesnumber=edges[i].size();
@@ -287,14 +283,12 @@ void Slice::sliceByCpu(Mesh mesh,float zmin,float zmax)
         {
             facesmap.insert(faces[i][j],j);
         }
-        num=0;
-        while(num<faces[i].size()/2)
+        while(!facesmap.empty())
         {
             face.clear();
             loc.clear();
             face.push_back(facesmap.constBegin().key());
             loc.push_back(facesmap.value(face.back()));
-            facesmap.erase(facesmap.constBegin());
             while(1)
             {
                 auto find_index = facesmap.find(face.back());
@@ -316,11 +310,15 @@ void Slice::sliceByCpu(Mesh mesh,float zmin,float zmax)
                 }
                 facesmap.remove(find_index.key());
             };
-            loc.pop_back();
-            locs.push_back(loc);
-            num +=loc.size();
+            if(loc.front()==loc.back())
+            {
+                loc.pop_back();
+                //cout<<loc.size()<<endl;
+                locs.push_back(loc);
+            }
         }
-        location.push_back(locs);
+        //cout<<"The "<<i<<" layer:"<<locs.size()<<endl;
+        location[i]=locs;
     }
     sorttime =time.elapsed();
 
@@ -352,8 +350,10 @@ void Slice::sliceByCpu(Mesh mesh,float zmin,float zmax)
         for(size_t j=0;j<location[i].size();j++)
         {
             lines.clear();
+            //cout<<"loop "<<j<<":"<<endl;
             for(size_t k=0;k<location[i][j].size();k++)
             {
+                //cout<<k<<":"<<points[i][location[i][j][k]]<<endl;
                 lines.push_back(points[i][location[i][j][k]]);
             }
             polylines.push_back(lines);
@@ -378,8 +378,8 @@ void Slice::sliceByGpu(vector<float> halfedge,float zmin,float zmax)
         zheight += thick;
         layernumber++;
     }
-    edges.resize(layernumber);
-    faces.resize(layernumber);
+    edges.resize(layernumber+1);
+    faces.resize(layernumber+1);
     location.reserve(layernumber);
 
 //    time.start();
@@ -458,13 +458,12 @@ void Slice::sliceByGpu(vector<float> halfedge,float zmin,float zmax)
             facesmap.insert(faces[i][j],j);
         }
         num=0;
-        while(num<faces[i].size()/2)
+        while(num<edges[i].size()/2)
         {
             face.clear();
             loc.clear();
             face.push_back(facesmap.constBegin().key());
             loc.push_back(facesmap.value(face.back()));
-            facesmap.erase(facesmap.constBegin());
             while(1)
             {
                 auto find_index = facesmap.find(face.back());
@@ -540,42 +539,4 @@ void Slice::sliceByGpu(vector<float> halfedge,float zmin,float zmax)
     free(result);
     comptime +=time.elapsed();
 
-//    time.restart();
-//    vector<Point>point;
-//    vector<vector<Point>>points;
-//    points.reserve(layernumber);
-//    for(uint i=0;i<layernumber;i++)
-//    {
-//        //cout<<"The "<<i<<" layer:"<<edges[i].size()<<endl;
-//        point.clear();
-//        for(uint j=0;j<edges[i].size();j++)
-//        {
-//            Point p1=edges[i][j].first;
-//            Point p2=edges[i][j].second;
-//            float diffx=float(p1.x()-p2.x());
-//            float diffy=float(p1.y()-p2.y());
-//            float diffz=float(p1.z()-p2.z());
-//            float x=float(p1.x())+diffx*(z[i]-float(p1.z()))/diffz;
-//            float y=float(p1.y())+diffy*(z[i]-float(p1.z()))/diffz;
-//            point.push_back(Point(x,y,z[i]));
-//            //cout<<p1<<" "<<p2<<endl;
-//        }
-//        points.push_back(point);
-//    }
-//    for(uint i=0;i<layernumber;i++)
-//    {
-//        polylines.clear();
-//        //cout<<"The "<<i<<" layer:"<<edges[i].size()/2<<endl;
-//        for(size_t j=0;j<location[i].size();j++)
-//        {
-//            lines.clear();
-//            for(size_t k=0;k<location[i][j].size();k++)
-//            {
-//                lines.push_back(points[i][location[i][j][k]]);
-//            }
-//            polylines.push_back(lines);
-//        }
-//        intrpoints.push_back(polylines);
-//    }
-//    comptime +=time.elapsed();
 }

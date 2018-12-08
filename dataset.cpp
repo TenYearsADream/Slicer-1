@@ -20,12 +20,12 @@ void dataSet::getIndices()
     for(size_t i=0;i<mesh.number_of_vertices();i++)
     {
         Mesh::Vertex_index v=Mesh::Vertex_index(Mesh::size_type(i));
-        vertices.push_back((float)mesh.point(v).x());
-        vertices.push_back((float)mesh.point(v).y());
-        vertices.push_back((float)mesh.point(v).z());
-        X.push_back((float)mesh.point(v).x());
-        Y.push_back((float)mesh.point(v).y());
-        Z.push_back((float)mesh.point(v).z());
+        vertices.push_back(float(mesh.point(v).x()));
+        vertices.push_back(float(mesh.point(v).y()));
+        vertices.push_back(float(mesh.point(v).z()));
+        X.push_back(float(mesh.point(v).x()));
+        Y.push_back(float(mesh.point(v).y()));
+        Z.push_back(float(mesh.point(v).z()));
         //cout<<v<<":"<<mesh.point(v)<<endl;
     }
     surroundBox[0]=*min_element(X.begin(),X.end());
@@ -37,12 +37,12 @@ void dataSet::getIndices()
     for(size_t i=0;i<mesh.number_of_faces();i++)
     {
         Mesh::Face_index f=Mesh::Face_index(Mesh::size_type(i));
-        //cout<<f<<endl;
+        //cout<<f<<":";
         CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
-        for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(f), mesh);vbegin != vend;++vbegin)\
+        for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(f), mesh);vbegin != vend;++vbegin)
         {
-            indices.push_back((unsigned short)(*vbegin));
-            //cout<<unsigned short(*vbegin)<<" ";
+            indices.push_back(uint(*vbegin));
+            //cout<<ushort(*vbegin)<<" ";
         }
         //cout<<endl;
     }

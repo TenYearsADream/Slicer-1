@@ -15,7 +15,7 @@ typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
 typedef Kernel::Point_3 Point;
 typedef Kernel::Segment_3 Segment;
 typedef vector<Point> Lines;
-typedef list<Lines> Polylines;
+typedef vector<Lines> Polylines;
 
 class Slice
 {
@@ -45,7 +45,7 @@ private:
 private:
     void sliceByHeight(Mesh mesh,float zmin,float zmax);
     void sliceByEdge(Mesh mesh,float zmin,float zmax);
-    void sliceByCpu(Mesh mesh,float zmin,float zmax);
+    void sliceByCpu(vector<float> halfedge,float zmin,float zmax);
     void sliceByGpu(vector<float> halfedge,float zmin,float zmax);
 };
 
