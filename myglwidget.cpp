@@ -10,16 +10,16 @@
 #include <QOpenGLShaderProgram>
 using namespace std;
 static float colorMap[][3]={
-    {0.7,0.7,0.7},
+    {0.7f,0.7f,0.7f},
     {1.0,0.0,0.0},
     {0.0,1.0,0.0},
     {0.0,0.0,1.0},
     {1.0,1.0,0.0},
     {1.0,0.0,1.0},
-    {0.667,0.667,1.0},
+    {0.667f,0.667f,1.0},
     {1.0,0.5,0.0},
     {0.5,0.0,0.0},
-    {1.0,0.8,0.8},
+    {1.0,0.8f,0.8f},
     {0.0,0.0,0.5},
 };
 MyGLWidget::MyGLWidget(QWidget *parent) :QOpenGLWidget(parent)
@@ -102,7 +102,7 @@ void MyGLWidget::resizeGL(int width, int height)
     }
     glViewport(0, 0, width, height);    // Reset The Current Viewport
     projection.setToIdentity();
-    projection.perspective(30.0f, (GLfloat)width/(GLfloat)height, 0.001f,1000.0f);
+    projection.perspective(2.0f, width/height,0.01f,1000.0f);
     //projection.ortho(-100.0,100.0,-100.0/((GLfloat)width/(GLfloat)height),100.0/((GLfloat)width/(GLfloat)height),0.01,1000.0);
 }
 
@@ -223,7 +223,7 @@ void MyGLWidget::paintModel()
                 vector<GLushort>().swap(index);
                 for(size_t j=0;j<clusterTable[i].size();j++)
                 {
-                    index.push_back(indices[3*size_t(clusterTable[i][j])+0]);
+                    index.push_back(ushort(indices[3*size_t(clusterTable[i][j]+0)]));
                     index.push_back(indices[3*size_t(clusterTable[i][j])+1]);
                     index.push_back(indices[3*size_t(clusterTable[i][j])+2]);
                 }
@@ -248,6 +248,7 @@ void MyGLWidget::wheelEvent(QWheelEvent *event)
          ztrans += 5.0f;
      } else if (numDegrees.y() < 0) {
          ztrans -= 5.0f;
+
      }
      this->update();
      event->accept();
@@ -257,7 +258,7 @@ void MyGLWidget::mouseMoveEvent(QMouseEvent *event)
 {
     if (event->buttons() & Qt::LeftButton)
     {
-        QVector2D newPos = (QVector2D)event->pos();
+        QVector2D newPos = QVector2D(event->pos());
         QVector2D diff = newPos - mousePos;
         xtrans +=diff.x()/10;
         ytrans +=diff.y()/10;

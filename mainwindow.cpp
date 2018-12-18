@@ -12,18 +12,16 @@
 #include <QSplitter>
 #include <QTableView>
 #include <QDebug>
-#include <Qtime>
+#include <QTime>
 #include <QLabel>
 #include <QProgressDialog>
 #include <QThread>
-#include <QtConcurrent>
 #include <iostream>
 #include "windows.h"
-#include"WinBase.h"
-#include "Psapi.h"
 #include "mainwindow.h"
 #include "hierarchicalclustering.h"
 #include "Slice.h"
+#include "meshfix.h"
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
@@ -44,7 +42,6 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     this->setCentralWidget(cenWidget);
 
     opengl= new MyGLWidget(cenWidget);
-    //tableWidget =new MyTableWidget((cenWidget));
     QWidget *toolWidget=new QWidget(cenWidget);
     QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
     QVBoxLayout *toollayout = new QVBoxLayout();
@@ -70,29 +67,33 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     placeSpinBoxz->setRange(-360, 360);  // 范围
     QPushButton *placeButton = new QPushButton(tr("place"));
     connect(placeButton,SIGNAL(clicked()),this,SLOT(modelPlace()));
+    QPushButton *repairButton = new QPushButton(tr("repair"));
+    connect(repairButton,SIGNAL(clicked()),this,SLOT(modelRepair()));
     QWidget *modelsetQWidget=new QWidget(toolWidget);
     QVBoxLayout *modellayout = new QVBoxLayout();
     QHBoxLayout *modellayout1 = new QHBoxLayout();
     QHBoxLayout *modellayout2 = new QHBoxLayout();
     QHBoxLayout *modellayout3 = new QHBoxLayout();
-    //rightlayout->addWidget(tableWidget);
+    QHBoxLayout *modellayout4 = new QHBoxLayout();
     modellayout1->addWidget(placeLablex,0,Qt::AlignCenter);
     modellayout1->addWidget(placeSpinBoxx,0,Qt::AlignCenter);
     modellayout2->addWidget(placeLabley,0,Qt::AlignCenter);
     modellayout2->addWidget(placeSpinBoxy,0,Qt::AlignCenter);
     modellayout3->addWidget(placeLablez,0,Qt::AlignCenter);
     modellayout3->addWidget(placeSpinBoxz,0,Qt::AlignCenter);
+    modellayout4->addWidget(placeButton,0,Qt::AlignCenter);
+    modellayout4->addWidget(repairButton,0,Qt::AlignCenter);
     modellayout->addLayout(modellayout1);
     modellayout->addLayout(modellayout2);
     modellayout->addLayout(modellayout3);
-    modellayout->addWidget(placeButton);
+    modellayout->addLayout(modellayout4);
     modelsetQWidget->setLayout(modellayout);
     toollayout->addWidget(modelsetQWidget);
     toollayout->setStretchFactor(modelsetQWidget,4);
 
     //分层显示布局
     sliceSpinBox = new QDoubleSpinBox(cenWidget);
-    sliceSpinBox->setRange(0.1, 20);  // 范围
+    sliceSpinBox->setRange(0.01, 20);  // 范围
     sliceSpinBox->setDecimals(2);  // 精度
     sliceSpinBox->setSingleStep(0.05); // 步长
     QPushButton *sliceButton = new QPushButton(tr("slice"),(cenWidget));
@@ -154,13 +155,6 @@ MainWindow::~MainWindow()
     delete(shapediameterfunction);
 }
 
-//void MainWindow::showMemoryInfo()
-//{
-//    HANDLE handle=GetCurrentProcess();
-//    PROCESS_MEMORY_COUNTERS pmc;
-//    GetProcessMemoryInfo(handle,&pmc,sizeof(pmc));
-//    qDebug()<<"using memory:"<<pmc.WorkingSetSize/1000000<<"MB"<<endl;
-//}
 
 void MainWindow::openFile()
 {
@@ -171,32 +165,31 @@ void MainWindow::openFile()
     if(!path.isEmpty()) {
         QTime time;
         time.start();
-        if(!readstl.ReadStlFile(path))
+        dataset.mesh.clear();
+        if(!readstl.ReadStlFile(path,dataset))
         {
             cout<<"Failed to read STL file!"<<endl;
             return;
         }
-        qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";
-        dataset.mesh.clear();
-        dataset=readstl.dataset;
-        dataset.getIndices();
+        qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";        
         qDebug()<<"number of vertices:"<<dataset.mesh.number_of_vertices();
+        qDebug()<<"number of edges:"<<dataset.mesh.number_of_edges();
         qDebug()<<"number of faces:"<<dataset.mesh.number_of_faces();
         qDebug()<<"number of normals:"<<readstl.normalList.size();
+        dataset.halfedgeOnGpu();
         float x=dataset.surroundBox[1]-dataset.surroundBox[0];
         float y=dataset.surroundBox[3]-dataset.surroundBox[2];
         float z=dataset.surroundBox[5]-dataset.surroundBox[4];
         qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
-        opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0;
-        opengl->ytrans=(dataset.surroundBox[2]+dataset.surroundBox[3])/2.0;
-        opengl->ztrans=1.0/(qMax(qAbs(dataset.surroundBox[4]),qAbs(dataset.surroundBox[5])));
+        opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0f;
+        opengl->ytrans=(dataset.surroundBox[2]+dataset.surroundBox[3])/2.0f;
+        opengl->ztrans=-z;
         opengl->clusterTable.clear();
         opengl->vertices.clear();
         opengl->indices.clear();
         opengl->intrpoints.clear();
-//        opengl->vertices=dataset.vertices;
-//        opengl->indices=dataset.indices;
-        //showMemoryInfo();
+        opengl->vertices=readstl.vertices;
+        opengl->indices=readstl.indices;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
@@ -227,28 +220,23 @@ void MainWindow::modelSegment()
 
 void MainWindow::modelSlice()
 {
-    QTime time;
     opengl->clusterTable.clear();
     opengl->intrpoints.clear();
     layerSlider->setValue(1);
-    slice.thick=sliceSpinBox->value();
+    slice.thick=float(sliceSpinBox->value());
     slice.isAdapt=isAdapt->isChecked();
     slice.isParaComp=isParaComp->isChecked();
-    if(!dataset.mesh.is_empty())
+    if(!dataset.halfedge.empty())
     {
-        time.start();
         cout<<"start slice"<<endl;
-//        QFuture<void> fut = QtConcurrent::run(&slice,Slice::startSlice,dataset.mesh,dataset.surroundBox[4],dataset.surroundBox[5]);
-//        fut.waitForFinished();
-        slice.startSlice(dataset.mesh,dataset.surroundBox[4],dataset.surroundBox[5]);
-
+        slice.startSlice(dataset.mesh,dataset.halfedge,dataset.surroundBox[4],dataset.surroundBox[5]);
         opengl->intrpoints=slice.intrpoints;
         if(slice.isAdapt)
             cout<<"number of layers with adapt:"<<slice.layernumber<<endl;
         else
             cout<<"number of layers without adapt:"<<slice.layernumber<<endl;
-        layerSlider->setRange(1,slice.layernumber);
-        layerSpinBox->setRange(1,slice.layernumber);
+        layerSlider->setRange(1,int(slice.layernumber));
+        layerSpinBox->setRange(1,int(slice.layernumber));
 
     } else {
         QMessageBox::warning(this, tr("error"),
@@ -266,9 +254,9 @@ void MainWindow::modelPlace()
     if(!dataset.mesh.is_empty())
     {
         dataset.rotateModel(x,y,z);
-        opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0;
-        opengl->ytrans=(dataset.surroundBox[2]+dataset.surroundBox[3])/2.0;
-        opengl->ztrans=1.0/(qMax(qAbs(dataset.surroundBox[4]),qAbs(dataset.surroundBox[5])));
+        opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0f;
+        opengl->ytrans=(dataset.surroundBox[2]+dataset.surroundBox[3])/2.0f;
+        opengl->ztrans=1.0f/(qMax(qAbs(dataset.surroundBox[4]),qAbs(dataset.surroundBox[5])));
         opengl->vertices=dataset.vertices;
         opengl->indices=dataset.indices;
 
@@ -277,4 +265,25 @@ void MainWindow::modelPlace()
                              tr("You did not import any model."));
     }
 
+}
+
+void MainWindow::modelRepair()
+{
+    QTime time;
+    time.start();
+    MeshFix meshfix=MeshFix(&dataset.mesh);
+    dataset.halfedgeOnGpu();
+    dataset.getIndices();
+    qDebug()<<"time of repairing the model:"<<time.elapsed()/1000.0<<"s";
+    qDebug()<<"number of vertices after repairing:"<<dataset.mesh.number_of_vertices();
+    qDebug()<<"number of edges after repairing:"<<dataset.mesh.number_of_edges();
+    qDebug()<<"number of faces after repairing:"<<dataset.mesh.number_of_faces();
+    float x=dataset.surroundBox[1]-dataset.surroundBox[0];
+    float y=dataset.surroundBox[3]-dataset.surroundBox[2];
+    float z=dataset.surroundBox[5]-dataset.surroundBox[4];
+    qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
+    opengl->vertices.clear();
+    opengl->indices.clear();
+    opengl->vertices=dataset.vertices;
+    opengl->indices=dataset.indices;
 }

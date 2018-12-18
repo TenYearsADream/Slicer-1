@@ -12,6 +12,8 @@ using namespace std;
 bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
 {
     normalList.clear();//清空vector
+    vertices.clear();
+    indices.clear();
     dataset.mesh.clear();
     file.setFileName(filename);
     uchar* buffer;
@@ -90,13 +92,13 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
             memcpy(&x,buffer, 4);buffer +=4;
             memcpy(&y,buffer, 4);buffer +=4;
             memcpy(&z,buffer, 4);buffer +=4;
-            if(qAbs(x)<1e-8f)x=0;
-            if(qAbs(y)<1e-8f)y=0;
-            if(qAbs(z)<1e-8f)z=0;
+//            if(qAbs(x)<1e-12f)x=0;
+//            if(qAbs(y)<1e-12f)y=0;
+//            if(qAbs(z)<1e-12f)z=0;
             //cout<<x<<" "<<y<<" "<<z<<endl;
-            strx = QString::number(double(x), 10, 8);
-            stry = QString::number(double(y), 10, 8);
-            strz = QString::number(double(z), 10, 8);
+            strx = QString::number(double(x), 10, 15);
+            stry = QString::number(double(y), 10, 15);
+            strz = QString::number(double(z), 10, 15);
             //qDebug()<<strx<<" "<<stry<<" "<<strz;
             key="1"+strx+stry+strz;
             index=addPoint(key,Point(x,y,z),dataset);
@@ -106,6 +108,9 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
         Mesh::Vertex_index vy(point[1]);
         Mesh::Vertex_index vz(point[2]);
         dataset.mesh.add_face(vx,vy,vz);
+        indices.push_back(ushort(point[0]));
+        indices.push_back(ushort(point[1]));
+        indices.push_back(ushort(point[2]));
         buffer += 2;//跳过尾部标志
     }
     delete[] point;
@@ -122,6 +127,9 @@ uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
     else
     {
         dataset.mesh.add_vertex(point);
+        vertices.push_back(float(point.x()));
+        vertices.push_back(float(point.y()));
+        vertices.push_back(float(point.z()));
         verticesmap.insert(key,numberVertices);
         index=numberVertices;
         numberVertices++;
@@ -175,13 +183,13 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
         for (int i = 0; i < 3; i++)
         {
             ss >> useless >> x >> y >> z;
-            if(qAbs(x)<1e-8)x=0;
-            if(qAbs(y)<1e-8)y=0;
-            if(qAbs(z)<1e-8)z=0;
+            if(qAbs(x)<1e-12)x=0;
+            if(qAbs(y)<1e-12)y=0;
+            if(qAbs(z)<1e-12)z=0;
             //cout<<x<<" "<<y<<" "<<z<<endl;
-            strx = QString::number(x, 10, 8);
-            stry = QString::number(y, 10, 8);
-            strz = QString::number(z, 10, 8);
+            strx = QString::number(x, 10, 15);
+            stry = QString::number(y, 10, 15);
+            strz = QString::number(z, 10, 15);
             //qDebug()<<strx<<" "<<stry<<" "<<strz;
             key="1"+strx+stry+strz;
             index=addPoint(key,Point(x,y,z),dataset);
@@ -192,6 +200,9 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
         Mesh::Vertex_index v2(point[2]);
         //cout<<v0<<" "<<v1<<" "<<v2<<endl;
         dataset.mesh.add_face(v0,v1,v2);
+        indices.push_back(point[0]);
+        indices.push_back(point[1]);
+        indices.push_back(point[2]);
         getline(ss, useless);//空行
         getline(ss, useless);//end loop
         getline(ss, useless);//end facet

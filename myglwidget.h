@@ -10,8 +10,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include "hashtable.h"
-#include "Slice.h"
+#include "dataset.h"
 
 class QTimer;
 using namespace std;
@@ -29,7 +28,6 @@ public:
     GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis
     int layer;
 private:
-    HDC hdc;
     QTimer *timer;
     QOpenGLShaderProgram *program,*sliceProgram;
 private:

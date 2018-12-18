@@ -1,6 +1,5 @@
 ﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
-
 #include <QMainWindow>
 #include <QTextEdit>
 #include <QPushButton>
@@ -13,6 +12,7 @@
 #include "readstlfile.h"
 #include "shapediameterfunction.h"
 #include "dataset.h"
+#include "Slice.h"
 
 using namespace std;
 class MainWindow : public QMainWindow
@@ -22,7 +22,6 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
-    int nFaceCount=0;
     void showMemoryInfo();
     dataSet dataset;
 private slots:
@@ -30,6 +29,7 @@ private slots:
     void modelSlice();
     void modelPlace();
     void openFile();
+    void modelRepair();
 private:
     QAction *openAction;
     ReadSTLFile readstl;
@@ -42,7 +42,6 @@ private:
     QSpinBox *layerSpinBox;
     QSpinBox *placeSpinBoxx,*placeSpinBoxy,*placeSpinBoxz;
     QCheckBox *isAdapt,*isParaComp;
-
 
 };
 

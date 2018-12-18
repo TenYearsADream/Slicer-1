@@ -1,14 +1,5 @@
 ﻿#include "Slice.h"
-#include <boost/bind.hpp>
-#include <CGAL/intersections.h>
-#include <CGAL/Polygon_mesh_slicer.h>
-#include <algorithm>
-#include <QDebug>
-#include <windows.h>
-#include <QProgressDialog>
-#include <QMessageBox>
-#include <QFile>
-#include <QString>
+//#include <CGAL/Polygon_mesh_slicer.h>
 using namespace std;
 Slice::Slice()
 {
@@ -27,20 +18,11 @@ Slice::~Slice()
 }
 
 void Slice::startSlice(Mesh mesh,vector<float> halfedge,float zmin,float zmax)
-{  
+{
     findtime=0;
     comptime=0;
     sorttime=0;
     intrpoints.clear();
-    //    QProgressDialog *progressDlg=new QProgressDialog();
-    //    progressDlg->setWindowModality(Qt::WindowModal);
-    //    progressDlg->setMinimumDuration(0);
-    //    progressDlg->setAttribute(Qt::WA_DeleteOnClose, true);
-    //    progressDlg->setWindowTitle("切片");
-    //    progressDlg->setLabelText("正在切片......");
-    //    progressDlg->setRange(zmin,zmax);
-
-
     //sliceByEdge(mesh,zmin,zmax);
     if(isParaComp)
     {
@@ -59,13 +41,12 @@ void Slice::startSlice(Mesh mesh,vector<float> halfedge,float zmin,float zmax)
         cout<<"cpu compute time:"<<comptime<<"ms"<<endl;
         //cout<<"time of cpu computing:"<<time.elapsed()<<"ms"<<endl;
     }
-    //progressDlg->close();
 }
 
 void Slice::sliceByHeight(Mesh mesh,float zmin,float zmax)
 {
     layernumber=0;
-    CGAL::Polygon_mesh_slicer<Mesh, Kernel> slicer(mesh);
+    //CGAL::Polygon_mesh_slicer<Mesh, Kernel> slicer(mesh);
     zheight=zmin;
     while(zheight<=zmax)
     {
@@ -80,7 +61,7 @@ void Slice::sliceByHeight(Mesh mesh,float zmin,float zmax)
         //cout<<"layer of "<<layernumber<<":"<<endl;
         polylines.clear();
         time.start();
-        slicer(Kernel::Plane_3(0, 0, 1, double(-zheight)),back_inserter(polylines));
+        //slicer(Kernel::Plane_3(0, 0, 1, double(-zheight)),back_inserter(polylines));
         comptime +=time.elapsed();
         layernumber++;
         intrpoints.push_back(polylines);
@@ -494,10 +475,6 @@ void Slice::sliceByGpu(vector<float> halfedge,float zmin,float zmax)
     sorttime =time.elapsed();
 
     time.restart();
-//    float *interSection1,*interSection2,*result;
-//    interSection1 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
-//    interSection2 = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
-//    result = (float *)malloc(layernumber*linesnumber *3* sizeof(float));
     float *interSection1 =new float[layernumber*linesnumber *3];
     float *interSection2 =new float[layernumber*linesnumber *3];
     float *result =new float[layernumber*linesnumber *3];

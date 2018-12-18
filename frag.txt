@@ -20,6 +20,7 @@ in vec3 GNormal;
 noperspective in vec3 GEdgeDistance;
 
 layout( location = 0 ) out vec4 FragColor;
+
 uniform vec3 SegmentColor;
 uniform bool isSlice;
 vec3 phongModel( vec4 position, vec3 norm )
@@ -42,12 +43,20 @@ void main() {
 	float d = min( GEdgeDistance.x, GEdgeDistance.y );
 	d = min( d, GEdgeDistance.z );
 	float mixVal = smoothstep(-0.01,0.01, d );
-
-	vec3 LightColor=phongModel(vec4(GPosition,1.0),GNormal);
-
-	vec3 Color=mix(LightColor, SegmentColor ,0.7);
-	if(isSlice)
-		FragColor=vec4(1.0,0.0,0.0,1.0);
+	vec3 FrontColor=phongModel(vec4(GPosition,1.0),GNormal);
+	vec3 BackColor=phongModel(vec4(GPosition,1.0),GNormal);
+	if(gl_FrontFacing)
+	{				
+		vec3 Color=mix(FrontColor, SegmentColor ,0.7);		
+		if(isSlice)
+			FragColor=vec4(1.0,0.0,0.0,1.0);
+		else
+			FragColor = mix( vec4(0.4,0.4,0.4,1.0), vec4(Color,1.0), mixVal );
+	}
 	else
-		FragColor = mix( vec4(0.4,0.4,0.4,1.0), vec4(Color,1.0), mixVal );
+	{
+		
+		FragColor = mix( vec4(0.1,0.1,0.1,1.0),vec4(BackColor, 1.0),mixVal);
+	}
+	
 }

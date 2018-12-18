@@ -10,12 +10,6 @@
 #include "opencl.h"
 #include "dataset.h"
 using namespace std;
-typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
-typedef Kernel::Point_3 Point;
-typedef Kernel::Segment_3 Segment;
-typedef vector<Point> Lines;
-typedef vector<Lines> Polylines;
 
 class Slice
 {
@@ -48,5 +42,4 @@ private:
     void sliceByCpu(vector<float> halfedge,float zmin,float zmax);
     void sliceByGpu(vector<float> halfedge,float zmin,float zmax);
 };
-
 #endif // SLICE_H

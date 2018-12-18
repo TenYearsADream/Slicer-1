@@ -1,14 +1,16 @@
 ﻿#ifndef DATASET_H
 #define DATASET_H
 #include <vector>
-#include <QObject>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
 using namespace std;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
 typedef Kernel::Point_3 Point;
-
+typedef Kernel::Segment_3 Segment;
+typedef vector<Point> Lines;
+typedef vector<Lines> Polylines;
+typedef unsigned int uint;
 struct Vertex{
     Point point;
     uint edgeindex;
