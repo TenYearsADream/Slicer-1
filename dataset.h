@@ -7,6 +7,7 @@ using namespace std;
 typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
 typedef CGAL::Surface_mesh<Kernel::Point_3> Mesh;
 typedef Kernel::Point_3 Point;
+typedef Kernel::Vector_3 Vector;
 typedef Kernel::Segment_3 Segment;
 typedef vector<Point> Lines;
 typedef vector<Lines> Polylines;
@@ -47,13 +48,14 @@ public:
         float surroundBox[6];
         vector<uint> indices;
         vector<float> vertices;
+        vector<float> vertexnormals;
 
         vector<Vertex> vertexset;
         multimap<float,Edge>edgeset;
         vector<Face> faceset;
         vector<float> halfedge;
 private:
-
+        void computeVertexnormals();
 };
 
 #endif // DATASET_H

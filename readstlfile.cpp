@@ -92,9 +92,9 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
             memcpy(&x,buffer, 4);buffer +=4;
             memcpy(&y,buffer, 4);buffer +=4;
             memcpy(&z,buffer, 4);buffer +=4;
-//            if(qAbs(x)<1e-12f)x=0;
-//            if(qAbs(y)<1e-12f)y=0;
-//            if(qAbs(z)<1e-12f)z=0;
+            if(qAbs(x)<1e-12f)x=0;
+            if(qAbs(y)<1e-12f)y=0;
+            if(qAbs(z)<1e-12f)z=0;
             //cout<<x<<" "<<y<<" "<<z<<endl;
             strx = QString::number(double(x), 10, 15);
             stry = QString::number(double(y), 10, 15);
@@ -139,19 +139,11 @@ uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
 
 void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
 {
-//    int size=strlen(buf);
-//    QProgressDialog *progressDlg=new QProgressDialog();
-//    progressDlg->setWindowModality(Qt::WindowModal);
-//    progressDlg->setMinimumDuration(0);
-//    progressDlg->setAttribute(Qt::WA_DeleteOnClose, true);
-//    progressDlg->setWindowTitle("导入模型");
-//    progressDlg->setLabelText("正在建立拓扑关系......");
-//    progressDlg->setRange(0,size);
-
     const int offset=280;
     numberVertices=0;
     numberTriangles = 0;
     double x=0, y=0, z=0;
+    Point normal,p0,p1,p2,ab,bc,nor;
     QString strx(" "),stry(" "),strz(" "),key(" ");
     uint index=0;
     uint *point=new uint[3]();
@@ -164,19 +156,13 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
     string useless;
     do
     {
-//        progressDlg->setValue(numberTriangles*offset);
-//        if(progressDlg->wasCanceled())
-//        {
-//            dataset.mesh.clear();
-//            QMessageBox::warning(NULL,QStringLiteral("提示"),QStringLiteral("取消导入"));
-//            return false;
-//        }
         strncpy(facet,buffer,sizeof(facet));
         facet[offset-1]='\0';
         //cout<<facet<<endl;
         stringstream ss(facet);
         ss >> useless;//facet
         ss >> useless >> x >> y >>z;//法向量
+        normal=Point(x,y,z);
         normalList.push_back(Point(x, y, z));
         getline(ss, useless);
         getline(ss, useless);//outer loop
@@ -194,12 +180,21 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
             key="1"+strx+stry+strz;
             index=addPoint(key,Point(x,y,z),dataset);
             point[i]=index;
-        }
+        }       
         Mesh::Vertex_index v0(point[0]);
         Mesh::Vertex_index v1(point[1]);
         Mesh::Vertex_index v2(point[2]);
         //cout<<v0<<" "<<v1<<" "<<v2<<endl;
-        dataset.mesh.add_face(v0,v1,v2);
+        p0=dataset.mesh.point(v0);
+        p1=dataset.mesh.point(v1);
+        p2=dataset.mesh.point(v2);
+        ab=Point(p0.x()-p1.x(),p0.y()-p1.y(),p0.z()-p1.z());
+        bc=Point(p1.x()-p2.x(),p1.y()-p2.y(),p1.z()-p2.z());
+        nor=Point(ab.y()*bc.z()-bc.y()*ab.z(),bc.x()*ab.z()-ab.x()*bc.z(),ab.x()*bc.y()-bc.x()*ab.y());
+        if((normal.x()*nor.x()+normal.y()*nor.y()+normal.z()*nor.z())<0)
+            dataset.mesh.add_face(v0,v1,v2);
+        else
+            dataset.mesh.add_face(v0,v2,v1);
         indices.push_back(point[0]);
         indices.push_back(point[1]);
         indices.push_back(point[2]);
@@ -213,7 +208,6 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
         //cout<<"facenumber:"<<numberTriangles<<" "<<dataset.mesh.num_faces()<<endl;
     }while(buffer!=NULL);
     delete[] point;
-    //progressDlg->close();
 }
 
 

@@ -102,7 +102,7 @@ void MyGLWidget::resizeGL(int width, int height)
     }
     glViewport(0, 0, width, height);    // Reset The Current Viewport
     projection.setToIdentity();
-    projection.perspective(2.0f, width/height,0.01f,1000.0f);
+    projection.perspective(100.0f, width/height,0.01f,1000.0f);
     //projection.ortho(-100.0,100.0,-100.0/((GLfloat)width/(GLfloat)height),100.0/((GLfloat)width/(GLfloat)height),0.01,1000.0);
 }
 
@@ -114,6 +114,7 @@ void MyGLWidget::paintGL()
     model.setToIdentity();
     model.translate(xtrans, -ytrans, ztrans);
     model.rotate(rotation);
+    model.scale(scale);
     QMatrix4x4 mv = view * model;
     if(!intrpoints.empty())
     {
@@ -123,8 +124,8 @@ void MyGLWidget::paintGL()
             sliceProgram->setUniformValue("NormalMatrix", mv.normalMatrix());
             sliceProgram->setUniformValue("MVP", projection * mv);
             sliceProgram->bind();
-            //for(int i=0;i<layer;i++)
-                paintSlice(layer);
+            for(int i=0;i<layer;i++)
+                paintSlice(i);
         }
     }
     else{
@@ -202,7 +203,7 @@ void MyGLWidget::paintModel()
     glBufferData(GL_ARRAY_BUFFER,GLsizei(vertices.size()*sizeof(GLfloat)),vertices.data(), GL_STATIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, handle[1]);
-    glBufferData(GL_ARRAY_BUFFER,GLsizei(vertices.size()*sizeof(GLfloat)),NULL, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,GLsizei(vertices.size()*sizeof(GLfloat)),vertexnormals.data(), GL_STATIC_DRAW);
     if(!indices.empty())
     {
         if(clusterTable.empty())

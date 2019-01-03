@@ -7,13 +7,14 @@ class MeshFix
 public:
     MeshFix(Mesh *_mesh);
     ~MeshFix();
-    bool fixConnectivity();
+    void repair();
 
 private:
-    int removeVertices();
+    void fixConnectivity();
     void stitchBorders();
-    int holeFill();
+    void holeFill();
     void normalRepair();
+    void selfIntersect();
 private:
     Mesh *mesh;
 };

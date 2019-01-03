@@ -177,6 +177,7 @@ void MainWindow::openFile()
         qDebug()<<"number of faces:"<<dataset.mesh.number_of_faces();
         qDebug()<<"number of normals:"<<readstl.normalList.size();
         dataset.halfedgeOnGpu();
+        dataset.getIndices();
         float x=dataset.surroundBox[1]-dataset.surroundBox[0];
         float y=dataset.surroundBox[3]-dataset.surroundBox[2];
         float z=dataset.surroundBox[5]-dataset.surroundBox[4];
@@ -184,12 +185,17 @@ void MainWindow::openFile()
         opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0f;
         opengl->ytrans=(dataset.surroundBox[2]+dataset.surroundBox[3])/2.0f;
         opengl->ztrans=-z;
+        opengl->scale=90.0f/(*max_element(dataset.surroundBox, dataset.surroundBox + 6));
         opengl->clusterTable.clear();
         opengl->vertices.clear();
         opengl->indices.clear();
+        opengl->vertexnormals.clear();
         opengl->intrpoints.clear();
-        opengl->vertices=readstl.vertices;
-        opengl->indices=readstl.indices;
+//        opengl->vertices=readstl.vertices;
+//        opengl->indices=readstl.indices;
+        opengl->vertices=dataset.vertices;
+        opengl->indices=dataset.indices;
+        opengl->vertexnormals=dataset.vertexnormals;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
@@ -284,6 +290,8 @@ void MainWindow::modelRepair()
     qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
     opengl->vertices.clear();
     opengl->indices.clear();
+    opengl->vertexnormals.clear();
     opengl->vertices=dataset.vertices;
     opengl->indices=dataset.indices;
+    opengl->vertexnormals=dataset.vertexnormals;
 }

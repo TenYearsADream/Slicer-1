@@ -23,9 +23,10 @@ public:
     ~MyGLWidget();
     vector<uint> indices;
     vector<float> vertices;
+    vector<float>vertexnormals;
     vector<Polylines> intrpoints;
     vector <vector<int>> clusterTable;
-    GLfloat xtrans, ytrans, ztrans; // translation on x,y,z-axis
+    GLfloat xtrans, ytrans, ztrans,scale; // translation on x,y,z-axis
     int layer;
 private:
     QTimer *timer;

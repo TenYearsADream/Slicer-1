@@ -4,14 +4,17 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT       += core gui xml
 QT += concurrent
 QT +=opengl
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = Slicer
 TEMPLATE = app
+
 CONFIG += c++11
+CONFIG +=debug
+CONFIG +=release
 
 SOURCES += main.cpp\
         mainwindow.cpp \
@@ -57,5 +60,4 @@ LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_ImageIO
 LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Core
 LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Qt5
 LIBS += -LD:/Qt/CGAL-4.13/auxiliary/gmp/lib/ -llibgmp-10
-QMAKE_CXXFLAGS_RELEASE += -O3
-
+#QMAKE_CXXFLAGS_RELEASE += -O3
