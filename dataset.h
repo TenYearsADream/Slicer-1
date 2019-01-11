@@ -12,6 +12,7 @@ typedef Kernel::Segment_3 Segment;
 typedef vector<Point> Lines;
 typedef vector<Lines> Polylines;
 typedef unsigned int uint;
+
 struct Vertex{
     Point point;
     uint edgeindex;
@@ -35,6 +36,26 @@ struct Face{
     uint e2;
 };
 
+struct EdgeNode{
+    float x1;
+    float y1;
+    float z1;
+    float x2;
+    float y2;
+    float z2;
+    unsigned int f;
+    EdgeNode(float _x1,float _y1,float _z1,float _x2,float _y2,float _z2,unsigned int _f)
+    {
+        x1=_x1;
+        y1=_y1;
+        z1=_z1;
+        x2=_x2;
+        y2=_y2;
+        z2=_z2;
+        f=_f;
+    }
+};
+
 class dataSet
 {
 public:
@@ -53,7 +74,7 @@ public:
         vector<Vertex> vertexset;
         multimap<float,Edge>edgeset;
         vector<Face> faceset;
-        vector<float> halfedge;
+        vector<EdgeNode> halfedge;
 private:
         void computeVertexnormals();
 };

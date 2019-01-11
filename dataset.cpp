@@ -156,13 +156,7 @@ void dataSet::halfedgeOnGpu()
         Mesh::Face_index f=mesh.face(hi);
         Point p1=mesh.point(vertex0);
         Point p2=mesh.point(vertex1);
-        halfedge.push_back(float(p1.x()));
-        halfedge.push_back(float(p1.y()));
-        halfedge.push_back(float(p1.z()));
-        halfedge.push_back(float(p2.x()));
-        halfedge.push_back(float(p2.y()));
-        halfedge.push_back(float(p2.z()));
-        halfedge.push_back(float(f));
+        halfedge.push_back(EdgeNode(float(p1.x()),float(p1.y()),float(p1.z()),float(p2.x()),float(p2.y()),float(p2.z()),f));
     }
 }
 

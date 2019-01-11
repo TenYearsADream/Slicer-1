@@ -49,7 +49,7 @@ protected:
     void mousePressEvent(QMouseEvent *);
     void wheelEvent(QWheelEvent *);
 
-    void paintSlice(int layer);
+    void paintSlice(size_t layer);
     void paintModel();
 
 public slots:

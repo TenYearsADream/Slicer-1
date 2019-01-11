@@ -178,6 +178,7 @@ void MainWindow::openFile()
         qDebug()<<"number of normals:"<<readstl.normalList.size();
         dataset.halfedgeOnGpu();
         dataset.getIndices();
+        dataset.mesh.clear();
         float x=dataset.surroundBox[1]-dataset.surroundBox[0];
         float y=dataset.surroundBox[3]-dataset.surroundBox[2];
         float z=dataset.surroundBox[5]-dataset.surroundBox[4];
@@ -193,9 +194,9 @@ void MainWindow::openFile()
         opengl->intrpoints.clear();
 //        opengl->vertices=readstl.vertices;
 //        opengl->indices=readstl.indices;
-        opengl->vertices=dataset.vertices;
-        opengl->indices=dataset.indices;
-        opengl->vertexnormals=dataset.vertexnormals;
+//        opengl->vertices=dataset.vertices;
+//        opengl->indices=dataset.indices;
+//        opengl->vertexnormals=dataset.vertexnormals;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
@@ -235,8 +236,7 @@ void MainWindow::modelSlice()
     if(!dataset.halfedge.empty())
     {
         cout<<"start slice"<<endl;
-        slice.startSlice(dataset.mesh,dataset.halfedge,dataset.surroundBox[4],dataset.surroundBox[5]);
-        opengl->intrpoints=slice.intrpoints;
+        slice.startSlice(dataset.halfedge,dataset.surroundBox[4],dataset.surroundBox[5],opengl->intrpoints);
         if(slice.isAdapt)
             cout<<"number of layers with adapt:"<<slice.layernumber<<endl;
         else

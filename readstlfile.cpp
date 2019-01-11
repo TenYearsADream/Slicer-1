@@ -108,9 +108,9 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
         Mesh::Vertex_index vy(point[1]);
         Mesh::Vertex_index vz(point[2]);
         dataset.mesh.add_face(vx,vy,vz);
-        indices.push_back(ushort(point[0]));
-        indices.push_back(ushort(point[1]));
-        indices.push_back(ushort(point[2]));
+//        indices.push_back(ushort(point[0]));
+//        indices.push_back(ushort(point[1]));
+//        indices.push_back(ushort(point[2]));
         buffer += 2;//跳过尾部标志
     }
     delete[] point;
@@ -127,9 +127,9 @@ uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
     else
     {
         dataset.mesh.add_vertex(point);
-        vertices.push_back(float(point.x()));
-        vertices.push_back(float(point.y()));
-        vertices.push_back(float(point.z()));
+//        vertices.push_back(float(point.x()));
+//        vertices.push_back(float(point.y()));
+//        vertices.push_back(float(point.z()));
         verticesmap.insert(key,numberVertices);
         index=numberVertices;
         numberVertices++;
