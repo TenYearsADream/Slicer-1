@@ -1,4 +1,7 @@
 ﻿#include "Slice.h"
+#include <QFile>
+#include <QTextStream>
+#include <QDebug>
 //#include <CGAL/Polygon_mesh_slicer.h>
 using namespace std;
 Slice::Slice()
@@ -17,14 +20,19 @@ Slice::~Slice()
 
 }
 
-void Slice::startSlice(vector<EdgeNode> &halfedge,float zmin,float zmax,vector<Polylines> &intrpoints)
+void Slice::startSlice(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
 {
     findtime=0;
     comptime=0;
     sorttime=0;
     if(isParaComp)
     {
-        sliceByGpu(halfedge,zmin,zmax,intrpoints);
+        sliceByGpu(halfedge,surroundBox,intrpoints);
+        QString fileName="C:/Users/Administrator/Desktop/gpuSlice.slc";
+        if(genSlicesFile(fileName,intrpoints,surroundBox))
+        {
+            cout<<"slc file generated successfully."<<endl;
+        }
         cout<<"find edge time:"<<findtime<<"ms"<<endl;
         cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
         cout<<"gpu compute time:"<<comptime<<"ms"<<endl;
@@ -33,7 +41,12 @@ void Slice::startSlice(vector<EdgeNode> &halfedge,float zmin,float zmax,vector<P
     else
     {
         //sliceByHeight(mesh,zmin,zmax);
-        sliceByCpu(halfedge,zmin,zmax,intrpoints);
+        sliceByCpu(halfedge,surroundBox,intrpoints);
+        QString fileName="C:/Users/Administrator/Desktop/cpuSlice.slc";
+        if(genSlicesFile(fileName,intrpoints,surroundBox))
+        {
+            cout<<"slc file generated successfully."<<endl;
+        }
         cout<<"find edge time:"<<findtime<<"ms"<<endl;
         cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
         cout<<"cpu compute time:"<<comptime<<"ms"<<endl;
@@ -67,8 +80,10 @@ void Slice::sliceByHeight(Mesh mesh,float zmin,float zmax,vector<Polylines> &int
     }
 }
 
-void Slice::sliceByCpu(vector<EdgeNode> halfedge,float zmin,float zmax,vector<Polylines> &intrpoints)
+void Slice::sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
 {
+    float zmin=surroundBox[4];
+    float zmax=surroundBox[5];
     z.clear();
     zheight=zmin;
     layernumber=0;
@@ -218,9 +233,11 @@ void Slice::sliceByCpu(vector<EdgeNode> halfedge,float zmin,float zmax,vector<Po
     cout<<"intersect edges done!"<<endl;
 }
 
-void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float zmin,float zmax,vector<Polylines> &intrpoints)
+void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
 { 
     z.clear();
+    float zmin=surroundBox[4];
+    float zmax=surroundBox[5];
     zheight=zmin;
     layernumber=uint(ceil((zmax-zmin)/thick));
     //将所有半边分组
@@ -331,26 +348,50 @@ void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float zmin,float zmax,vector<P
     time.restart();
     size_t total=size_t(*max_element(linesnumber.begin(),linesnumber.end()));
     //cout<<layernumber<<" "<<total<<endl;
-    cl::Buffer resultbuf(opencl.context,CL_MEM_WRITE_ONLY,total*3*sizeof(float));
+    cl_int err;
+    cl::Buffer resultbuf(opencl.context,CL_MEM_WRITE_ONLY,total*3*sizeof(float),0,&err);
+    if (err < 0)
     {
-        vector<EdgeNode> edgeset;
-        edgeset.reserve(total);
-        for(uint i=0;i<edges.size();i++)
+        cout << "Failed to create a resultbuffer." << err << endl;
+    }
+    {
+        cl::Buffer edgebuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,total*sizeof(EdgeNode),0,&err);
+        if (err < 0)
         {
-            //cout<<"The "<<i<<" layer:"<<edges[i].size()<<" "<<num<<endl;
-            for(uint j=0;j<edges[i].size();j++)
-            {
-                edgeset.push_back(edges[i][j]);
-            }
+            cout << "Failed to create a edgebuffer." << err << endl;
+        }
+        EdgeNode *edgeset=(EdgeNode*)opencl.queue.enqueueMapBuffer(edgebuf,CL_TRUE,CL_MAP_WRITE,0,total *sizeof(EdgeNode),0,0,&err);
+        if (err < 0)
+        {
+            cout << "Failed to create a edgeset." << err << endl;
         }
         cout<<"test1"<<endl;
-        cl::Buffer edgebuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,edgeset.size()*sizeof(EdgeNode),edgeset.data());
+        for(uint j=0;j<edges[0].size();j++)
+        {
+            edgeset[j]=edges[0][j];
+        }
+        size_t num=edges[0].size();
+        for(uint i=1;i<edges.size();i++)
+        {
+            for(uint j=0;j<edges[i].size();j++)
+            {
+                edgeset[num+j]=edges[i][j];
+            }
+            num+=edges[i].size();
+        }
+        opencl.queue.enqueueUnmapMemObject(edgebuf,edgeset);
         opencl.executeKernel(edgebuf,resultbuf,total,layernumber,z.data(),linesnumber);
         cout<<"test2"<<endl;
     }
-    vector<vector<EdgeNode>>().swap(edges);
-    vector<float>result(total*3,0);
-    opencl.queue.enqueueReadBuffer(resultbuf, CL_TRUE, 0,total*3* sizeof(float),&result[0], 0, NULL);
+    float*result=(float*)opencl.queue.enqueueMapBuffer(resultbuf,CL_TRUE,CL_MEM_WRITE_ONLY,0,total*3*sizeof(float),0,0,&err);
+    if (err < 0)
+    {
+        cout << "Failed to map resultbuf. " << err << endl;
+    }
+    for(uint i=0;i<10;i++)
+    {
+        cout<<result[3*i]<<" "<<result[3*i+1]<<" "<<result[3*i+2]<<endl;
+    }
     cout<<"test3"<<endl;
     uint num=0;
     intrpoints.clear();
@@ -381,4 +422,77 @@ void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float zmin,float zmax,vector<P
     vector<Lines>().swap(polylines);
     vector<Point>().swap(lines);
     comptime +=time.elapsed();
+}
+
+bool Slice::genSlicesFile(const QString& fileName,const vector<Polylines> intrpoints,float surroundBox[6])
+{
+    char g_arrFileBuff[1*1024*1024];
+    char buff[4];
+    char charbuf[256];
+    FILE *stream;
+    QByteArray ba = fileName.toLocal8Bit();
+    float value[2];
+    QTime startTime = QTime::currentTime();
+    if((stream=fopen(ba.data(),"wb"))==NULL)
+    {
+        cout<<"Cannot open output slc file."<<endl;
+        return false;
+    }
+    setvbuf(stream , g_arrFileBuff, _IOFBF , sizeof(g_arrFileBuff));
+
+    QString slcHeader = "-SLCVER " + QString::number(2.0, 'f', 1)
+            + " -UNIT " + "MM"
+            + " -TYPE "  + "PART"
+            + " -PACKAGE "  + "MATERIALISE C-TOOLS 2.xx"
+            + " -EXTENTS " + QString::number(double(surroundBox[0]), 'f', 6) + ","
+            + QString::number(double(surroundBox[1]), 'f', 6) + " "
+            + QString::number(double(surroundBox[2]), 'f', 6) + ","
+            + QString::number(double(surroundBox[3]), 'f', 6) + " "
+            + QString::number(double(surroundBox[4]), 'f', 6) + ","
+            + QString::number(double(surroundBox[5]), 'f', 6) + " ";
+
+    fwrite(slcHeader.toLocal8Bit().data(), 1,slcHeader.toLocal8Bit().size(),stream);
+    buff[0] = 0x0D;
+    buff[1] = 0x0A;
+    buff[2] = 0x1A;
+    fwrite(buff,1,3,stream);
+    memset(charbuf, 0x20, sizeof(charbuf));
+    fwrite(charbuf, 1, sizeof(charbuf), stream);
+    buff[0] =1;
+    fwrite(buff, 1, 1, stream);
+    float linewidecompen=0.025f;
+    float reserved=0.025f;
+    fwrite(&surroundBox[0], sizeof(float), 1, stream);
+    fwrite(&thick, sizeof(float), 1, stream);
+    fwrite(&linewidecompen, sizeof(float), 1, stream);
+    fwrite(&reserved, sizeof(float), 1,  stream);
+    for (uint i = 0; i < intrpoints.size(); i++) {
+        value[0] =z[i];
+        fwrite(&value[0], sizeof(float), 1, stream);
+        uint numb_outerBoundaries=uint(intrpoints[i].size());
+        fwrite(&numb_outerBoundaries, sizeof(numb_outerBoundaries), 1, stream);
+        for(uint j = 0; j < intrpoints[i].size(); j++) {
+            uint numb_verts=uint(intrpoints[i][j].size()+1);
+            uint numb_gaps=0;
+            fwrite(&numb_verts, sizeof(unsigned), 1, stream);
+            fwrite(&numb_gaps, sizeof(unsigned), 1, stream);
+            for(uint k = 0; k < intrpoints[i][j].size(); k++) {
+                value[0] = float(intrpoints[i][j][k].x());
+                fwrite(&value[0], sizeof(float), 1, stream);
+                value[0] = float(intrpoints[i][j][k].y());
+                fwrite(&value[0], sizeof(float), 1,  stream);
+            }
+            value[0] = float(intrpoints[i][j][0].x());
+            fwrite(&value[0], sizeof(float), 1, stream);
+            value[0] = float(intrpoints[i][j][0].y());
+            fwrite(&value[0], sizeof(float), 1,  stream);
+        }
+    }
+    float  maxZlays = z.back();
+    fwrite(&maxZlays, sizeof(float), 1, stream);
+    memset(buff, 0xff, 4);
+    fwrite(buff,1,4,stream);
+    fclose(stream);
+    qDebug()<<"genSlicesFile time:"<< startTime.msecsTo(QTime::currentTime())<<" ms";
+    return true;
 }

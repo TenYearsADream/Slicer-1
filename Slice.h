@@ -18,7 +18,7 @@ public:
     bool isAdapt;
     bool isParaComp;
 public:
-    void startSlice(vector<EdgeNode> &halfedge,float zmin,float zmax,vector<Polylines> &intrpoints);
+    void startSlice(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
 
 private:
     QTime time;
@@ -34,7 +34,8 @@ private:
 
 private:
     void sliceByHeight(Mesh mesh,float zmin,float zmax,vector<Polylines> &intrpoints);
-    void sliceByCpu(vector<EdgeNode> halfedge,float zmin,float zmax,vector<Polylines> &intrpoints);
-    void sliceByGpu(vector<EdgeNode> &halfedge,float zmin,float zmax,vector<Polylines> &intrpoints);
+    void sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
+    void sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
+    bool genSlicesFile(const QString& fileName,const vector<Polylines> intrpoints,float surroundBox[6]);
 };
 #endif // SLICE_H
