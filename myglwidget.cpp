@@ -124,8 +124,7 @@ void MyGLWidget::paintGL()
             sliceProgram->setUniformValue("NormalMatrix", mv.normalMatrix());
             sliceProgram->setUniformValue("MVP", projection * mv);
             sliceProgram->bind();
-            //for(int i=0;i<layer;i++)
-                paintSlice(size_t(layer));
+            paintSlice(size_t(layer));
         }
     }
     else{
@@ -141,45 +140,49 @@ void::MyGLWidget::paintSlice(size_t layer)
 {
     vector<GLushort> sliceindices;
     vector<GLfloat> slicevertices;
-    for(uint i=0;i<intrpoints[layer].size();i++)
+    for(uint k=layer;k<=layer;k++)
     {
-        slicevertices.clear();
-        sliceindices.clear();
-        slicevertices.reserve(3*intrpoints[layer][i].size());
-        for(uint j=0;j<intrpoints[layer][i].size();j++)
+        for(uint i=0;i<intrpoints[k].size();i++)
         {
-            slicevertices.push_back(float(intrpoints[layer][i][j].x()));
-            slicevertices.push_back(float(intrpoints[layer][i][j].y()));
-            slicevertices.push_back(float(intrpoints[layer][i][j].z()));
+            slicevertices.clear();
+            sliceindices.clear();
+            slicevertices.reserve(3*intrpoints[k][i].size());
+            for(uint j=0;j<intrpoints[k][i].size();j++)
+            {
+                slicevertices.push_back(float(intrpoints[k][i][j].x()));
+                slicevertices.push_back(float(intrpoints[k][i][j].y()));
+                slicevertices.push_back(float(intrpoints[k][i][j].z()));
+            }
+            sliceindices.reserve(intrpoints[k][i].size());
+            for(ushort j=0;j<intrpoints[k][i].size();j++)
+            {
+                sliceindices.push_back(j);
+            }
+            unsigned int slicehandle[3];
+            glGenBuffers(3, slicehandle);
+
+            glEnableVertexAttribArray(0);  // Vertex position
+            glBindBuffer(GL_ARRAY_BUFFER, slicehandle[0]);
+            glVertexAttribPointer( GLuint(0), 3, GL_FLOAT, GL_FALSE, 0,NULL);
+
+            glEnableVertexAttribArray(1);  // Vertex normal
+            glBindBuffer(GL_ARRAY_BUFFER, slicehandle[1]);
+            glVertexAttribPointer(GLuint(1), 3, GL_FLOAT, GL_FALSE, 0, NULL );
+
+            glBindBuffer(GL_ARRAY_BUFFER, slicehandle[0]);
+            glBufferData(GL_ARRAY_BUFFER, GLsizei(slicevertices.size()*sizeof(GLfloat)),slicevertices.data(), GL_STATIC_DRAW);
+
+            glBindBuffer(GL_ARRAY_BUFFER, slicehandle[1]);
+            glBufferData(GL_ARRAY_BUFFER, GLsizei(slicevertices.size()*sizeof(GLfloat)),slicevertices.data(), GL_STATIC_DRAW);
+
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slicehandle[2]);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER,GLsizei(sliceindices.size()*sizeof(GLfloat)),sliceindices.data(), GL_STATIC_DRAW);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slicehandle[2]);
+            //开始绘制
+            glDrawElements(GL_LINE_LOOP,GLsizei(sliceindices.size()), GL_UNSIGNED_SHORT,0);
         }
-        sliceindices.reserve(intrpoints[layer][i].size());
-        for(ushort j=0;j<intrpoints[layer][i].size();j++)
-        {
-            sliceindices.push_back(j);
-        }
-        unsigned int slicehandle[3];
-        glGenBuffers(3, slicehandle);
-
-        glEnableVertexAttribArray(0);  // Vertex position
-        glBindBuffer(GL_ARRAY_BUFFER, slicehandle[0]);
-        glVertexAttribPointer( GLuint(0), 3, GL_FLOAT, GL_FALSE, 0,NULL);
-
-        glEnableVertexAttribArray(1);  // Vertex normal
-        glBindBuffer(GL_ARRAY_BUFFER, slicehandle[1]);
-        glVertexAttribPointer(GLuint(1), 3, GL_FLOAT, GL_FALSE, 0, NULL );
-
-        glBindBuffer(GL_ARRAY_BUFFER, slicehandle[0]);
-        glBufferData(GL_ARRAY_BUFFER, GLsizei(slicevertices.size()*sizeof(GLfloat)),slicevertices.data(), GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ARRAY_BUFFER, slicehandle[1]);
-        glBufferData(GL_ARRAY_BUFFER, GLsizei(slicevertices.size()*sizeof(GLfloat)),slicevertices.data(), GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slicehandle[2]);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER,GLsizei(sliceindices.size()*sizeof(GLfloat)),sliceindices.data(), GL_STATIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slicehandle[2]);
-        //开始绘制
-        glDrawElements(GL_LINE_LOOP,GLsizei(sliceindices.size()), GL_UNSIGNED_SHORT,0);
     }
+
 
 }
 

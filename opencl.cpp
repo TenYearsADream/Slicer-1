@@ -8,8 +8,6 @@ OpenCL::OpenCL()
     const char* CAPBYHEIGHT ="capbyheight";
     const char* CALALLEDGES ="calalledges";
     const char* GROUPEDGE ="groupedge";
-    const char* GROUPEDGE2 ="groupedge2";
-    const char* CALLAYEREDGES ="callayeredges";
 
     vector<cl::Platform> platforms;
     vector<cl::Device> devices;
@@ -34,8 +32,6 @@ OpenCL::OpenCL()
     capbyheight=cl::Kernel(program, CAPBYHEIGHT);
     calalledges=cl::Kernel(program, CALALLEDGES);
     groupedge=cl::Kernel(program, GROUPEDGE);
-    groupedge2=cl::Kernel(program, GROUPEDGE2);
-    callayeredges=cl::Kernel(program, CALLAYEREDGES);
     /* Create a command queue */
     queue=cl::CommandQueue(context, devices[0],CL_QUEUE_PROFILING_ENABLE);
 
@@ -89,26 +85,16 @@ void OpenCL::executeKernel(cl::Buffer halfedgebuf,vector<int> &buf,float z0,floa
     queue.enqueueReadBuffer(clbuf, CL_TRUE, 0,LINESNUMBER*3* sizeof(int),&buf[0], 0, NULL);
 }
 
-void OpenCL::executeKernel(cl::Buffer edgebuf,cl::Buffer resultbuf,size_t total,size_t LAYERNUMBER,float *zheight,vector<unsigned int>linesnumber)
+void OpenCL::executeKernel(cl::Buffer halfedgebuf,cl::Buffer edgebuf,cl::Buffer resultbuf,size_t total,size_t LAYERNUMBER,float *zheight,vector<unsigned int>linesnumber)
 {
     cl::Buffer zbuf(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*sizeof(float),zheight);
     cl::Buffer linesnumberbuf(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,linesnumber.size()*sizeof(unsigned int),linesnumber.data());
-    calalledges.setArg(0,edgebuf);
-    calalledges.setArg(1,resultbuf);
-    calalledges.setArg(2,zbuf);
-    calalledges.setArg(3,linesnumberbuf);
+    calalledges.setArg(0,halfedgebuf);
+    calalledges.setArg(1,edgebuf);
+    calalledges.setArg(2,resultbuf);
+    calalledges.setArg(3,zbuf);
+    calalledges.setArg(4,linesnumberbuf);
     cl::NDRange globalSize(total,LAYERNUMBER);
     queue.enqueueNDRangeKernel(calalledges,cl::NullRange,globalSize,cl::NullRange);
-    queue.finish();
-}
-
-void OpenCL::executeKernel(cl::Buffer edgebuf,cl::Buffer resultbuf,size_t LINESNUMBER,float zheight)
-{
-    /* Create kernel argument */
-    callayeredges.setArg(0,edgebuf);
-    callayeredges.setArg(1,resultbuf);
-    callayeredges.setArg(2,sizeof(float),&zheight);
-    cl::NDRange globalSize(LINESNUMBER);
-    queue.enqueueNDRangeKernel(callayeredges,cl::NullRange,globalSize,cl::NullRange);
     queue.finish();
 }
