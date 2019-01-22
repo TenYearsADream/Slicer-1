@@ -233,10 +233,10 @@ void MainWindow::modelSlice()
     slice.thick=float(sliceSpinBox->value());
     slice.isAdapt=isAdapt->isChecked();
     slice.isParaComp=isParaComp->isChecked();
-    if(!dataset.halfedge.empty())
+    if(!dataset.halfedgeset.empty())
     {
         cout<<"start slice"<<endl;
-        slice.startSlice(dataset.halfedge,dataset.surroundBox[4],dataset.surroundBox[5],opengl->intrpoints);
+        slice.startSlice(dataset.vertexset,dataset.halfedgeset,dataset.surroundBox,opengl->intrpoints);
         if(slice.isAdapt)
             cout<<"number of layers with adapt:"<<slice.layernumber<<endl;
         else

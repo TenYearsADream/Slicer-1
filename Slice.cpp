@@ -20,14 +20,14 @@ Slice::~Slice()
 
 }
 
-void Slice::startSlice(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
+void Slice::startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
 {
     findtime=0;
     comptime=0;
     sorttime=0;
     if(isParaComp)
     {
-        sliceByGpu(halfedge,surroundBox,intrpoints);
+        sliceByGpu(vertex,halfedge,surroundBox,intrpoints);
         QString fileName="C:/Users/Administrator/Desktop/gpuSlice.slc";
         if(genSlicesFile(fileName,intrpoints,surroundBox))
         {
@@ -41,7 +41,8 @@ void Slice::startSlice(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
     else
     {
         //sliceByHeight(mesh,zmin,zmax);
-        sliceByCpu(halfedge,surroundBox,intrpoints);
+        //sliceOnGpu(vertex,halfedge,surroundBox,intrpoints);
+        sliceByCpu(vertex,halfedge,surroundBox,intrpoints);
         QString fileName="C:/Users/Administrator/Desktop/cpuSlice.slc";
         if(genSlicesFile(fileName,intrpoints,surroundBox))
         {
@@ -80,7 +81,7 @@ void Slice::sliceByHeight(Mesh mesh,float zmin,float zmax,vector<Polylines> &int
     }
 }
 
-void Slice::sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
+void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
 {
     float zmin=surroundBox[4];
     float zmax=surroundBox[5];
@@ -100,8 +101,8 @@ void Slice::sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
     edges.resize(layernumber+1);
     for(uint i=0;i<halfedge.size();i++)
     {
-        float z1=qMin(halfedge[i].z1,halfedge[i].z2);
-        float z2=qMax(halfedge[i].z1,halfedge[i].z2);
+        float z1=qMin(vertex[halfedge[i].x].z,vertex[halfedge[i].y].z);
+        float z2=qMax(vertex[halfedge[i].x].z,vertex[halfedge[i].y].z);
         int num1=int(ceil((z1-zmin)/thick));
         int num2=int((z2-zmin)/thick);
         if(qAbs(z2-z1)<1e-8f)num2=num1-1;
@@ -141,7 +142,7 @@ void Slice::sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
             face.reserve(edges[i].size());
             for(uint j=0;j<edges[i].size();j++)
             {
-                facesmap.insert(halfedge[edges[i][j]].f,j);
+                facesmap.insert(halfedge[edges[i][j]].z,j);
             }
             while(!facesmap.empty())
             {
@@ -161,12 +162,12 @@ void Slice::sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
                     if((index & 1) == 0)
                     {
                         loc.push_back(index+1);
-                        face.push_back(halfedge[edges[i][index+1]].f);
+                        face.push_back(halfedge[edges[i][index+1]].z);
                     }
                     else
                     {
                         loc.push_back(index-1);
-                        face.push_back(halfedge[edges[i][index-1]].f);
+                        face.push_back(halfedge[edges[i][index-1]].z);
                     }
                     facesmap.remove(find_index.key());
                 };
@@ -188,6 +189,7 @@ void Slice::sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
     time.restart();
     intrpoints.clear();
     intrpoints.reserve(layernumber+1);
+    cl_float3 v1,v2;
     for(uint i=0;i<layernumber;i++)
     {
         polylines.clear();
@@ -198,11 +200,13 @@ void Slice::sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
             //cout<<"loop "<<j<<":"<<endl;
             for(size_t k=0;k<location[i][j].size();k++)
             {
-                float diffx=halfedge[edges[i][location[i][j][k]]].x1-halfedge[edges[i][location[i][j][k]]].x2;
-                float diffy=halfedge[edges[i][location[i][j][k]]].y1-halfedge[edges[i][location[i][j][k]]].y2;
-                float diffz=halfedge[edges[i][location[i][j][k]]].z1-halfedge[edges[i][location[i][j][k]]].z2;
-                float x=halfedge[edges[i][location[i][j][k]]].x1+diffx*(z[i]-halfedge[edges[i][location[i][j][k]]].z1)/diffz;
-                float y=halfedge[edges[i][location[i][j][k]]].y1+diffy*(z[i]-halfedge[edges[i][location[i][j][k]]].z1)/diffz;
+                v1=vertex[halfedge[edges[i][location[i][j][k]]].x];
+                v2=vertex[halfedge[edges[i][location[i][j][k]]].y];
+                float diffx=v1.x-v2.x;
+                float diffy=v1.y-v2.y;
+                float diffz=v1.z-v2.z;
+                float x=v1.x+diffx*(z[i]-v1.z)/diffz;
+                float y=v1.y+diffy*(z[i]-v1.z)/diffz;
                 lines.push_back(Point(x,y,z[i]));
             }
             polylines.push_back(lines);
@@ -215,7 +219,7 @@ void Slice::sliceByCpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
     cout<<"intersect edges done!"<<endl;
 }
 
-void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
+void Slice::sliceByGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
 { 
     z.clear();
     float zmin=surroundBox[4];
@@ -226,11 +230,12 @@ void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
     time.start();
     vector<vector<uint>>edges;
     edges.resize(layernumber+1);
-    cl::Buffer halfedgebuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,halfedge.size()*sizeof(EdgeNode),halfedge.data());
+    cl::Buffer vertexbuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,vertex.size()*sizeof(cl_float3),vertex.data());
+    cl::Buffer halfedgebuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,halfedge.size()*sizeof(cl_uint3),halfedge.data());
     {
         vector<int> buf;
         buf.resize(halfedge.size()*3,-1);
-        opencl.executeKernel(halfedgebuf,buf,zmin,thick,halfedge.size());
+        opencl.executeKernel(vertexbuf,halfedgebuf,buf,zmin,thick,halfedge.size());
         for(uint i=0;i<halfedge.size();i++)
         {
             //cout<<buf[3*i+0]<<" "<<buf[3*i+1]<<" "<<buf[3*i+2]<<endl;
@@ -284,7 +289,7 @@ void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
             face.reserve(edges[i].size());
             for(uint j=0;j<edges[i].size();j++)
             {
-                facesmap.insert(halfedge[edges[i][j]].f,j);
+                facesmap.insert(halfedge[edges[i][j]].z,j);
             }
             while(!facesmap.empty())
             {
@@ -304,12 +309,12 @@ void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
                     if((index & 1) == 0)
                     {
                         loc.push_back(index+1);
-                        face.push_back(halfedge[edges[i][index+1]].f);
+                        face.push_back(halfedge[edges[i][index+1]].z);
                     }
                     else
                     {
                         loc.push_back(index-1);
-                        face.push_back(halfedge[edges[i][index-1]].f);
+                        face.push_back(halfedge[edges[i][index-1]].z);
                     }
                     facesmap.remove(find_index.key());
                 };
@@ -330,7 +335,7 @@ void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
     size_t total=size_t(*max_element(linesnumber.begin(),linesnumber.end()));
     //cout<<layernumber<<" "<<total<<endl;
     cl_int err;
-    cl::Buffer resultbuf(opencl.context,CL_MEM_WRITE_ONLY,total*3*sizeof(float),0,&err);
+    cl::Buffer resultbuf(opencl.context,CL_MEM_WRITE_ONLY,total*sizeof(cl_float3),0,&err);
     {
         cl::Buffer edgebuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_ALLOC_HOST_PTR,total*sizeof(uint),0,&err);
         uint *edgeset=(uint*)opencl.queue.enqueueMapBuffer(edgebuf,CL_TRUE,CL_MAP_WRITE,0,total *sizeof(uint),0,0,&err);
@@ -349,17 +354,17 @@ void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
             num+=edges[i].size();
         }
         opencl.queue.enqueueUnmapMemObject(edgebuf,edgeset);
-        opencl.executeKernel(halfedgebuf,edgebuf,resultbuf,total,layernumber,z.data(),linesnumber);
+        opencl.executeKernel(vertexbuf,halfedgebuf,edgebuf,resultbuf,total,layernumber,z.data(),linesnumber);
         cout<<"test2"<<endl;
     }
-    float*result=(float*)opencl.queue.enqueueMapBuffer(resultbuf,CL_TRUE,CL_MEM_WRITE_ONLY,0,total*3*sizeof(float),0,0,&err);
+    cl_float3 *result=(cl_float3*)opencl.queue.enqueueMapBuffer(resultbuf,CL_TRUE,CL_MEM_WRITE_ONLY,0,total*sizeof(cl_float3),0,0,&err);
     if(err<0)
     {
         cout<<"fail to map reuslt "<<err<<endl;
     }
     for(uint i=0;i<10;i++)
     {
-        cout<<result[3*i]<<" "<<result[3*i+1]<<" "<<result[3*i+2]<<endl;
+        cout<<result[i].x<<" "<<result[i].y<<" "<<result[i].z<<endl;
     }
     cout<<"test3"<<endl;
     uint num=0;
@@ -375,8 +380,8 @@ void Slice::sliceByGpu(vector<EdgeNode> &halfedge,float surroundBox[6],vector<Po
             for(size_t k=0;k<location[i][j].size();k++)
             {
                 //cout<<location[i][j][k]<<" "<<3*num+3*location[i][j][k]+0<<" "<<3*num+3*location[i][j][k]+1<<endl;
-                float x=result[3*num+3*location[i][j][k]+0];
-                float y=result[3*num+3*location[i][j][k]+1];
+                float x=result[num+location[i][j][k]].x;
+                float y=result[num+location[i][j][k]].y;
                 //cout<<Point(x,y,z[i])<<endl;
                 lines.push_back(Point(x,y,z[i]));
             }
@@ -464,4 +469,36 @@ bool Slice::genSlicesFile(const QString& fileName,const vector<Polylines> intrpo
     fclose(stream);
     qDebug()<<"genSlicesFile time:"<< startTime.msecsTo(QTime::currentTime())<<" ms";
     return true;
+}
+
+void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
+{
+    z.clear();
+    float zmin=surroundBox[4];
+    float zmax=surroundBox[5];
+    time.start();
+    zheight=zmin;
+    layernumber=0;
+    cl::Buffer vertexbuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,vertex.size()*sizeof(cl_float3),vertex.data());
+    cl::Buffer halfedgebuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,halfedge.size()*sizeof(cl_uint3),halfedge.data());
+    cl::Buffer resultbuf(opencl.context,CL_MEM_WRITE_ONLY,halfedge.size()*sizeof(cl_float4),NULL,NULL);
+    while(zheight<=zmin)
+    {
+        opencl.intersect.setArg(0,vertexbuf);
+        opencl.intersect.setArg(1,halfedgebuf);
+        opencl.intersect.setArg(2,sizeof(float),&zheight);
+        opencl.intersect.setArg(3,resultbuf);
+        cl::NDRange globalSize(halfedge.size());
+        opencl.queue.enqueueNDRangeKernel(opencl.intersect,cl::NullRange,globalSize,cl::NullRange,NULL,NULL);
+        opencl.queue.finish();
+        cl_float4*result=(cl_float4*)opencl.queue.enqueueMapBuffer(resultbuf,CL_TRUE,CL_MEM_WRITE_ONLY,0,halfedge.size()*sizeof(cl_float4));
+        for(uint i=0;i<halfedge.size();i++)
+        {
+            cout<<result[i].x<<" "<<result[i].y<<" "<<result[i].z<<" "<<result[i].w<<endl;
+        }
+        zheight += thick;
+        layernumber++;
+    }
+    findtime +=time.elapsed();
+    cout<<"group edges done!"<<endl;
 }

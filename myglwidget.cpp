@@ -177,7 +177,7 @@ void::MyGLWidget::paintSlice(size_t layer)
 
             glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slicehandle[2]);
             glBufferData(GL_ELEMENT_ARRAY_BUFFER,GLsizei(sliceindices.size()*sizeof(GLfloat)),sliceindices.data(), GL_STATIC_DRAW);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, slicehandle[2]);
+
             //开始绘制
             glDrawElements(GL_LINE_LOOP,GLsizei(sliceindices.size()), GL_UNSIGNED_SHORT,0);
         }

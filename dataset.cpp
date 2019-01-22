@@ -112,12 +112,29 @@ void dataSet::rotateModel(int x,int y,int z)
 
 void dataSet::halfedgeOnGpu()
 {
-//    for(Mesh::Vertex_index vi:mesh.vertices())
-//    {
-//        Vertex v;
-//        v.point=mesh.point(vi);
-//        vertexset.push_back(v);
-//    }
+    vertexset.clear();
+    vertexset.reserve(mesh.number_of_vertices());
+    cl_float3 v;
+    for(Mesh::Vertex_index vi:mesh.vertices())
+    {
+        v.x=float(mesh.point(vi).x());
+        v.y=float(mesh.point(vi).y());
+        v.z=float(mesh.point(vi).z());
+        vertexset.push_back(v);
+    }
+    halfedgeset.clear();
+    halfedgeset.reserve(mesh.number_of_halfedges());
+    cl_uint3 h;
+    for(Mesh::Halfedge_index hi:mesh.halfedges())
+    {
+        Mesh::Vertex_index v0=mesh.vertex(mesh.edge(hi),0);
+        Mesh::Vertex_index v1=mesh.vertex(mesh.edge(hi),1);
+        Mesh::Face_index f=mesh.face(hi);
+        h.x=v0;
+        h.y=v1;
+        h.z=f;
+        halfedgeset.push_back(h);
+    }
 
 //    for(Mesh::Face_index fi:mesh.faces())
 //    {
@@ -126,10 +143,10 @@ void dataSet::halfedgeOnGpu()
 //        e1=mesh.next(e0);
 //        e2=mesh.next(e1);
 //        //cout<<fi<<" "<<e0<<" "<<e1<<" "<<e2<<endl;
-//        Face f;
-//        f.e0=e0;
-//        f.e1=e1;
-//        f.e2=e2;
+//        cl_uint3 f;
+//        f.x=e0;
+//        f.y=e1;
+//        f.z=e2;
 //        faceset.push_back(f);
 //    }
 //    for(Mesh::Halfedge_index hi:mesh.halfedges())
@@ -148,16 +165,6 @@ void dataSet::halfedgeOnGpu()
 //        Edge e={zmax,zmin,vertex0,vertex1,hpre,hnext,hopposite,hi,f};
 //        edgeset.insert(make_pair(zmax,e));
 //    }
-    halfedge.clear();
-    for(Mesh::Halfedge_index hi:mesh.halfedges())
-    {
-        Mesh::Vertex_index vertex0=mesh.vertex(mesh.edge(hi),0);
-        Mesh::Vertex_index vertex1=mesh.vertex(mesh.edge(hi),1);
-        Mesh::Face_index f=mesh.face(hi);
-        Point p1=mesh.point(vertex0);
-        Point p2=mesh.point(vertex1);
-        halfedge.push_back(EdgeNode(float(p1.x()),float(p1.y()),float(p1.z()),float(p2.x()),float(p2.y()),float(p2.z()),f));
-    }
 }
 
 void dataSet::computeVertexnormals()

@@ -8,6 +8,7 @@ OpenCL::OpenCL()
     const char* CAPBYHEIGHT ="capbyheight";
     const char* CALALLEDGES ="calalledges";
     const char* GROUPEDGE ="groupedge";
+    const char* INTERSECT ="intersect";
 
     vector<cl::Platform> platforms;
     vector<cl::Device> devices;
@@ -32,6 +33,7 @@ OpenCL::OpenCL()
     capbyheight=cl::Kernel(program, CAPBYHEIGHT);
     calalledges=cl::Kernel(program, CALALLEDGES);
     groupedge=cl::Kernel(program, GROUPEDGE);
+    intersect=cl::Kernel(program,INTERSECT);
     /* Create a command queue */
     queue=cl::CommandQueue(context, devices[0],CL_QUEUE_PROFILING_ENABLE);
 
@@ -68,32 +70,34 @@ void OpenCL::executeKernel(float *interSection1,float *interSection2,float *resu
 //    cl_ulong totaltime = end - start;
 //    cout<<"gpu time: " <<totaltime*1e-6<<"ms"<<endl;
 }
-void OpenCL::executeKernel(cl::Buffer halfedgebuf,vector<int> &buf,float z0,float thick,size_t LINESNUMBER)
+void OpenCL::executeKernel(cl::Buffer vertexbuf,cl::Buffer halfedgebuf,vector<int> &buf,float z0,float thick,size_t LINESNUMBER)
 {
 
     /* Create a buffer to hold data */
     cl::Buffer clbuf(context,CL_MEM_WRITE_ONLY, LINESNUMBER*3*sizeof(int),NULL);
 
     /* Create kernel argument */
-    groupedge.setArg(0,halfedgebuf);
-    groupedge.setArg(1,sizeof (float),&z0);
-    groupedge.setArg(2,sizeof(float),&thick);
-    groupedge.setArg(3,clbuf);
+    groupedge.setArg(0,vertexbuf);
+    groupedge.setArg(1,halfedgebuf);
+    groupedge.setArg(2,sizeof (float),&z0);
+    groupedge.setArg(3,sizeof(float),&thick);
+    groupedge.setArg(4,clbuf);
     cl::NDRange globalSize(LINESNUMBER);
     queue.enqueueNDRangeKernel(groupedge,cl::NullRange,globalSize,cl::NullRange,NULL,&profileEvent);
     queue.finish();
     queue.enqueueReadBuffer(clbuf, CL_TRUE, 0,LINESNUMBER*3* sizeof(int),&buf[0], 0, NULL);
 }
 
-void OpenCL::executeKernel(cl::Buffer halfedgebuf,cl::Buffer edgebuf,cl::Buffer resultbuf,size_t total,size_t LAYERNUMBER,float *zheight,vector<unsigned int>linesnumber)
+void OpenCL::executeKernel(cl::Buffer vertexbuf,cl::Buffer halfedgebuf,cl::Buffer edgebuf,cl::Buffer resultbuf,size_t total,size_t LAYERNUMBER,float *zheight,vector<unsigned int>linesnumber)
 {
     cl::Buffer zbuf(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*sizeof(float),zheight);
     cl::Buffer linesnumberbuf(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,linesnumber.size()*sizeof(unsigned int),linesnumber.data());
-    calalledges.setArg(0,halfedgebuf);
-    calalledges.setArg(1,edgebuf);
-    calalledges.setArg(2,resultbuf);
-    calalledges.setArg(3,zbuf);
-    calalledges.setArg(4,linesnumberbuf);
+    calalledges.setArg(0,vertexbuf);
+    calalledges.setArg(1,halfedgebuf);
+    calalledges.setArg(2,edgebuf);
+    calalledges.setArg(3,resultbuf);
+    calalledges.setArg(4,zbuf);
+    calalledges.setArg(5,linesnumberbuf);
     cl::NDRange globalSize(total,LAYERNUMBER);
     queue.enqueueNDRangeKernel(calalledges,cl::NullRange,globalSize,cl::NullRange);
     queue.finish();
