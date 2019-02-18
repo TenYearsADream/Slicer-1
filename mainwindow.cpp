@@ -17,6 +17,7 @@
 #include <QProgressDialog>
 #include <QThread>
 #include <iostream>
+#include <CGAL/Polygon_mesh_processing/compute_normal.h>
 #include "windows.h"
 #include "mainwindow.h"
 #include "hierarchicalclustering.h"
@@ -28,14 +29,20 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
 {
     setWindowTitle(tr("Slicer"));
     setMinimumSize(1000,640);
-    openAction = new QAction(QIcon(":/images/file-open"), tr("&Open..."), this);
+
+    openAction = new QAction(QIcon(":/images/resource/open-file.png"), tr("&Open..."), this);
     openAction->setShortcuts(QKeySequence::Open);
     openAction->setStatusTip(tr("Open an existing file"));
-
     connect(openAction, &QAction::triggered, this, &MainWindow::openFile);
-
     QMenu *file = menuBar()->addMenu(tr("&File"));
     file->addAction(openAction);
+
+    saveStl = new QAction(QIcon(":/images/resource/save-file.png"), tr("&Save..."), this);
+    saveStl->setShortcuts(QKeySequence::Save);
+    saveStl->setStatusTip(tr("Save the model"));
+    connect(saveStl, &QAction::triggered, this, &MainWindow::saveFile);
+    file->addAction(saveStl);
+
 
     statusBar() ;
     QWidget *cenWidget = new QWidget(this); //this is point to QMainWindow
@@ -158,6 +165,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::openFile()
 {
+    QFileInfo fileinfo;
     QString path = QFileDialog::getOpenFileName(this,
                                                 tr("Open File"),
                                                 ".",
@@ -166,6 +174,11 @@ void MainWindow::openFile()
         QTime time;
         time.start();
         dataset.mesh.clear();
+        int index=path.lastIndexOf(".");
+        slicepath=path;
+        slicepath.truncate(index);
+        slice.slicepath[0]=slicepath+"_cpu.slc";
+        slice.slicepath[1]=slicepath+"_gpu.slc";
         if(!readstl.ReadStlFile(path,dataset))
         {
             cout<<"Failed to read STL file!"<<endl;
@@ -178,7 +191,7 @@ void MainWindow::openFile()
         qDebug()<<"number of normals:"<<readstl.normalList.size();
         dataset.halfedgeOnGpu();
         dataset.getIndices();
-        dataset.mesh.clear();
+        //dataset.mesh.clear();
         float x=dataset.surroundBox[1]-dataset.surroundBox[0];
         float y=dataset.surroundBox[3]-dataset.surroundBox[2];
         float z=dataset.surroundBox[5]-dataset.surroundBox[4];
@@ -194,14 +207,54 @@ void MainWindow::openFile()
         opengl->intrpoints.clear();
 //        opengl->vertices=readstl.vertices;
 //        opengl->indices=readstl.indices;
-//        opengl->vertices=dataset.vertices;
-//        opengl->indices=dataset.indices;
-//        opengl->vertexnormals=dataset.vertexnormals;
+        opengl->vertices=dataset.vertices;
+        opengl->indices=dataset.indices;
+        opengl->vertexnormals=dataset.vertexnormals;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
                              tr("You did not select any file."));
     }
+}
+
+void MainWindow::saveFile()
+{
+    qDebug()<<"start save file...";
+    QString stlfileName=slicepath+"_repaired.stl";
+    QFile file(stlfileName);
+    if(!file.open(QIODevice::WriteOnly))
+    {
+        qDebug() << "Can't open file for writing";
+    }
+    char name[80]="1234";
+    char attribute[2]="w";
+    file.write(name,sizeof(name));
+    uint facesnumber=dataset.mesh.number_of_faces();
+    float x,y,z;
+    file.write((char*)(&facesnumber),4);
+    auto fnormals =dataset.mesh.add_property_map<Mesh::Face_index, Vector>("f:normals", CGAL::NULL_VECTOR).first;
+    CGAL::Polygon_mesh_processing::compute_face_normals(dataset.mesh,fnormals,
+           CGAL::Polygon_mesh_processing::parameters::vertex_point_map(dataset.mesh.points()).geom_traits(Kernel()));
+    for(Mesh::Face_index f:dataset.mesh.faces())
+    {
+        //cout<<f<<"--"<<endl;
+        //cout<<fnormals[f]<<endl;
+        x=fnormals[f].x();y=fnormals[f].y();z=fnormals[f].z();
+        file.write((char*)&x,4);
+        file.write((char*)&y,4);
+        file.write((char*)&z,4);
+        BOOST_FOREACH(Mesh::Vertex_index vd,vertices_around_face(dataset.mesh.halfedge(f),dataset.mesh))
+        {
+           //cout <<dataset.mesh.point(vd)<<endl;
+           x=dataset.mesh.point(vd).x();y=dataset.mesh.point(vd).y();z=dataset.mesh.point(vd).z();
+           file.write((char*)&x,4);
+           file.write((char*)&y,4);
+           file.write((char*)&z,4);
+         }
+        file.write(attribute,2);
+    }
+    file.close();
+    qDebug()<<"save file to"<<stlfileName;
 }
 
 void MainWindow::modelSegment()
@@ -295,3 +348,4 @@ void MainWindow::modelRepair()
     opengl->indices=dataset.indices;
     opengl->vertexnormals=dataset.vertexnormals;
 }
+

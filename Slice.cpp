@@ -28,8 +28,7 @@ void Slice::startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     if(isParaComp)
     {
         sliceByGpu(vertex,halfedge,surroundBox,intrpoints);
-        QString fileName="C:/Users/Administrator/Desktop/gpuSlice.slc";
-        if(genSlicesFile(fileName,intrpoints,surroundBox))
+        if(genSlicesFile(slicepath[1],intrpoints,surroundBox))
         {
             cout<<"slc file generated successfully."<<endl;
         }
@@ -43,8 +42,7 @@ void Slice::startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
         //sliceByHeight(mesh,zmin,zmax);
         //sliceOnGpu(vertex,halfedge,surroundBox,intrpoints);
         sliceByCpu(vertex,halfedge,surroundBox,intrpoints);
-        QString fileName="C:/Users/Administrator/Desktop/cpuSlice.slc";
-        if(genSlicesFile(fileName,intrpoints,surroundBox))
+        if(genSlicesFile(slicepath[0],intrpoints,surroundBox))
         {
             cout<<"slc file generated successfully."<<endl;
         }

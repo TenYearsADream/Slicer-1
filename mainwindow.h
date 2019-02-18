@@ -30,8 +30,9 @@ private slots:
     void modelPlace();
     void openFile();
     void modelRepair();
+    void saveFile();
 private:
-    QAction *openAction;
+    QAction *openAction,*saveStl;
     ReadSTLFile readstl;
     MyGLWidget *opengl;
     Slice slice;
@@ -43,6 +44,7 @@ private:
     QSpinBox *placeSpinBoxx,*placeSpinBoxy,*placeSpinBoxz;
     QCheckBox *isAdapt,*isParaComp;
 
+    QString slicepath;
 };
 
 #endif // MAINWINDOW_H

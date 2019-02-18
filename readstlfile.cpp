@@ -78,6 +78,7 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
     numberTriangles=0;
     numberVertices=0;
     memcpy(&numberTriangles,buffer,4);//4字节三角面片个数
+    //cout<<numberTriangles<<endl;
     buffer +=4;
     //读取三角形面片
     for (uint i = 0; i <numberTriangles; i++)

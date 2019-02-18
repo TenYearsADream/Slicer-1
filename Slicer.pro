@@ -13,8 +13,8 @@ TARGET = Slicer
 TEMPLATE = app
 
 CONFIG += c++11
-#CONFIG +=debug
-#CONFIG +=release
+CONFIG +=debug
+CONFIG +=release
 
 SOURCES += main.cpp\
         mainwindow.cpp \
@@ -38,7 +38,8 @@ HEADERS  += mainwindow.h \
     Slice.h
 
 DISTFILES += \
-    resource/open-file.png
+    resource/open-file.png \
+    resource/save-file.png
 
 RESOURCES += \
     res.qrc

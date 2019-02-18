@@ -15,6 +15,7 @@ public:
     size_t layernumber;
     bool isAdapt;
     bool isParaComp;
+    QString slicepath[2];
 public:
     void startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
 
