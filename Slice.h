@@ -21,10 +21,6 @@ public:
 
 private:
     QTime time;
-
-    Lines lines;
-    Polylines polylines;
-
     float zheight;
     vector<float>z;
 
@@ -38,5 +34,9 @@ private:
     bool genSlicesFile(const QString& fileName,const vector<Polylines> intrpoints,float surroundBox[6]);
 
     void sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
+    void sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
+
+    void hashInsert(vector<cl_int3>& hashTable,uint key,uint value,uint length);
+    int hashSearch(vector<cl_int3>hashTable,uint key,uint length);
 };
 #endif // SLICE_H

@@ -1,6 +1,7 @@
 #include "opencl.h"
 #include <fstream>
 #include <iostream> 
+#include <QTime>
 using namespace std;
 OpenCL::OpenCL()
 {
@@ -9,6 +10,8 @@ OpenCL::OpenCL()
     const char* CALALLEDGES ="calalledges";
     const char* GROUPEDGE ="groupedge";
     const char* INTERSECT ="intersect";
+    const char* HASHFIND ="hashfind";
+
 
     vector<cl::Platform> platforms;
     vector<cl::Device> devices;
@@ -20,6 +23,16 @@ OpenCL::OpenCL()
     {
         string device_name = devices[i].getInfo<CL_DEVICE_NAME>();
         cout << "Device: " << device_name.c_str() << endl;
+        cl_uint maxComputeUnits=devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        cout << "Parallel compute units: " << maxComputeUnits<< endl;
+        size_t maxWorkItemPerGroup=devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+        cout << "maxWorkItemPerGroup: " << maxWorkItemPerGroup<< endl;
+        cl_ulong maxGlobalMemSize=devices[i].getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+        cout << "maxGlobalMemSize: " << maxGlobalMemSize/1024/1024<<"MB"<<endl;
+        cl_ulong maxConstantBufferSize=devices[i].getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
+        cout << "maxConstantBufferSize: " << maxConstantBufferSize/1024<<"KB"<<endl;
+        cl_ulong maxLocalMemSize=devices[i].getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+        cout << "maxLocalMemSize: " << maxLocalMemSize/1024<<"KB"<<endl;
     }
     context=cl::Context(devices);
 
@@ -34,6 +47,7 @@ OpenCL::OpenCL()
     calalledges=cl::Kernel(program, CALALLEDGES);
     groupedge=cl::Kernel(program, GROUPEDGE);
     intersect=cl::Kernel(program,INTERSECT);
+    hashfind=cl::Kernel(program,HASHFIND);
     /* Create a command queue */
     queue=cl::CommandQueue(context, devices[0],CL_QUEUE_PROFILING_ENABLE);
 
@@ -88,17 +102,101 @@ void OpenCL::executeKernel(cl::Buffer vertexbuf,cl::Buffer halfedgebuf,vector<in
     queue.enqueueReadBuffer(clbuf, CL_TRUE, 0,LINESNUMBER*3* sizeof(int),&buf[0], 0, NULL);
 }
 
-void OpenCL::executeKernel(cl::Buffer vertexbuf,cl::Buffer halfedgebuf,cl::Buffer edgebuf,cl::Buffer resultbuf,size_t total,size_t LAYERNUMBER,float *zheight,vector<unsigned int>linesnumber)
+void OpenCL::executeKernel(cl::Buffer vertexbuf,cl::Buffer halfedgebuf,vector<unsigned int>edgeset,vector<cl_float3>&result,size_t total,size_t LAYERNUMBER,float *zheight,vector<unsigned int>linesnumber)
 {
-    cl::Buffer zbuf(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*sizeof(float),zheight);
-    cl::Buffer linesnumberbuf(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,linesnumber.size()*sizeof(unsigned int),linesnumber.data());
-    calalledges.setArg(0,vertexbuf);
-    calalledges.setArg(1,halfedgebuf);
-    calalledges.setArg(2,edgebuf);
-    calalledges.setArg(3,resultbuf);
-    calalledges.setArg(4,zbuf);
-    calalledges.setArg(5,linesnumberbuf);
+    cl_int err;
+    cl::Buffer edgebuf(context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,edgeset.size()*sizeof(unsigned int),edgeset.data(),&err);
+    if(err<0)
+    {
+        cout<<"can't create the edgebuf."<<endl;
+    }
+    cl::Buffer resultbuf(context,CL_MEM_WRITE_ONLY,total*sizeof(cl_float3),result.data(),&err);
+    if(err<0)
+    {
+        cout<<"can't create the resultbuf."<<endl;
+    }
+    cl::Buffer zbuf(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,LAYERNUMBER*sizeof(float),zheight,&err);
+    if(err<0)
+    {
+        cout<<"can't create the zbuf."<<endl;
+    }
+    cl::Buffer linesnumberbuf(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,linesnumber.size()*sizeof(unsigned int),linesnumber.data(),&err);
+    if(err<0)
+    {
+        cout<<"can't create the linesnumberbuf."<<endl;
+    }
+    err =calalledges.setArg(0,vertexbuf);
+    err |= calalledges.setArg(1,halfedgebuf);
+    err |=calalledges.setArg(2,edgebuf);
+    err |=calalledges.setArg(3,resultbuf);
+    err |=calalledges.setArg(4,zbuf);
+    err |=calalledges.setArg(5,linesnumberbuf);
+    if(err<0)
+    {
+        cout<<"can't set the arg. "<<err<<endl;
+    }
     cl::NDRange globalSize(total,LAYERNUMBER);
-    queue.enqueueNDRangeKernel(calalledges,cl::NullRange,globalSize,cl::NullRange);
+    err=queue.enqueueNDRangeKernel(calalledges,cl::NullRange,globalSize,cl::NullRange);
+    if(err<0)
+    {
+        cout<<"can't executeKernel."<<err<<endl;
+    }
     queue.finish();
+    err=queue.enqueueReadBuffer(resultbuf, CL_TRUE, 0,result.size()*sizeof(cl_float3),&result[0], 0, NULL);
+    if(err<0)
+    {
+        cout<<"can't read the result."<<err<<endl;
+    }
+}
+
+void OpenCL::executeKernel(vector<unsigned int> edges,vector<unsigned int>linesnumber,vector<cl_int3>&hashTable,unsigned int layernumber,
+                           vector<unsigned int>&location,vector<unsigned int>&loopcount,vector<unsigned int>&loopnumber)
+{
+    cl_int err=0;
+    QTime time;
+    time.start();
+    cl::Buffer edgebuf(context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,edges.size()*sizeof(unsigned int),edges.data());
+    cl::Buffer linesnumberbuf(context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,linesnumber.size()*sizeof(unsigned int),linesnumber.data());
+    cl::Buffer hashTablebuf(context,CL_MEM_READ_WRITE| CL_MEM_COPY_HOST_PTR,hashTable.size()*sizeof(cl_int3),hashTable.data());
+    cl::Buffer locationbuf(context,CL_MEM_WRITE_ONLY,location.size()*sizeof(unsigned int),location.data(),&err);
+    cl::Buffer loopcountbuf(context,CL_MEM_WRITE_ONLY,loopcount.size()*sizeof(unsigned int),loopcount.data());
+    cl::Buffer loopnumberbuf(context,CL_MEM_WRITE_ONLY,loopnumber.size()*sizeof(unsigned int),loopnumber.data());
+    cout<<"create buffer time:"<<time.elapsed()<<"ms"<<endl;
+    err =hashfind.setArg(0,edgebuf);
+    err |=hashfind.setArg(1,linesnumberbuf);
+    err |=hashfind.setArg(2,hashTablebuf);
+    err |=hashfind.setArg(3,locationbuf);
+    err |=hashfind.setArg(4,loopcountbuf);
+    err |=hashfind.setArg(5,loopnumberbuf);
+    if(err<0)
+    {
+        cout<<"can't setArg."<<err<<endl;
+    }
+    cl::NDRange globalSize(layernumber);
+    err=queue.enqueueNDRangeKernel(hashfind,cl::NullRange,globalSize,cl::NullRange);
+    if(err<0)
+    {
+        cout<<"can't executeKernel hashfind."<<err<<endl;
+    }
+    queue.finish();
+    err= queue.enqueueReadBuffer(locationbuf, CL_TRUE, 0,location.size()*sizeof(unsigned int),&location[0]);
+    if(err<0)
+    {
+        cout<<"can't read the locationbuf. "<<err<<endl;
+    }
+    err=queue.enqueueReadBuffer(hashTablebuf, CL_TRUE, 0,hashTable.size()*sizeof(cl_int3),&hashTable[0]);
+    if(err<0)
+    {
+        cout<<"can't read the hashTablebuf. "<<err<<endl;
+    }
+    err =queue.enqueueReadBuffer(loopcountbuf, CL_TRUE, 0,loopcount.size()*sizeof(unsigned int),&loopcount[0]);
+    if(err<0)
+    {
+        cout<<"can't read the loopcountbuf. "<<err<<endl;
+    }
+    err =queue.enqueueReadBuffer(loopnumberbuf, CL_TRUE, 0,loopnumber.size()*sizeof(unsigned int),&loopnumber[0]);
+    if(err<0)
+    {
+        cout<<"can't read the loopnumberbuf. "<<err<<endl;
+    }
 }

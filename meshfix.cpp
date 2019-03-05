@@ -104,86 +104,6 @@ void MeshFix::selfIntersect()
         CGAL::Polygon_mesh_processing::self_intersections(*mesh,back_inserter(intersected_tris));
         cout << intersected_tris.size() << " pairs of triangles intersect." << std::endl;
 
-        vector<Mesh::Vertex_index> repairfaces;
-//        vector<Mesh::Halfedge_index>H0(3),H1(3);
-//        Mesh::Vertex_index v,v4,v5,v6,v7;
-//        Mesh::Halfedge_index h,h0,h1,h2;
-//        Mesh::Face_index f;
-//        //cout<<intersected_tris[0].first<<" "<<intersected_tris[0].second<<endl;
-//        Mesh::Face_index f0=intersected_tris[0].first;
-//        Mesh::Face_index f1=intersected_tris[0].second;
-//        H0[0]=mesh->halfedge(f0);
-//        H0[1]=mesh->next(H0[0]);
-//        H0[2]=mesh->prev(H0[0]);
-//        H1[0]=mesh->halfedge(f1);
-//        H1[1]=mesh->next(H1[0]);
-//        H1[2]=mesh->prev(H1[0]);
-//        Point v0,v1,v2,v3;
-//        Mesh::Edge_index e;
-//        bool flag=false;
-//        for(int i=0;i<3;i++)
-//        {
-//            for(int j=0;j<3;j++)
-//            {
-//                e=mesh->edge(H0[i]);
-//                v4=mesh->vertex(e,0);
-//                v5=mesh->vertex(e,1);
-//                v0=mesh->point(v4);
-//                v1=mesh->point(v5);
-//                e=mesh->edge(H1[j]);
-//                v6=mesh->vertex(e,0);
-//                v7=mesh->vertex(e,1);
-//                v2=mesh->point(v6);
-//                v3=mesh->point(v7);
-//                if(CGAL::collinear(v0,v1,v3))
-//                {
-//                    h0=H0[i];
-//                    h1=H1[j];
-//                    flag=true;
-//                    break;
-//                }
-//            }
-//            if(flag)
-//                break;
-//        }
-//        //cout<<h0<<" "<<h1<<" "<<mesh->opposite(h1)<<endl;
-//        //cout<<v4<<v5<<v6<<v7<<endl;
-//        if(CGAL::squared_distance(v0,v1)<CGAL::squared_distance(v2,v3))
-//        {
-//            h=h1;
-//            if((v3.x()<v0.x()<v2.x())||(v2.x()<v0.x()<v3.x()))
-//            {
-//                v=v4;
-//            }
-//            else
-//                v=v5;
-//        }
-//        else
-//        {
-//            h=h0;
-//            //mesh.set_face(h1,mesh.null_face());
-//            if((v0.x()<v3.x()<v1.x())||(v1.x()<v3.x()<v0.x()))
-//            {
-//                v=v6;
-//            }
-//            else
-//                v=v7;
-//        }
-//        //cout<<h<<" "<<v<<" "<<h2<<endl;
-//        f=mesh->face(h);
-//        v4=mesh->vertex(mesh->edge(h),0);
-//        v5=mesh->vertex(mesh->edge(h),1);
-//        v6=mesh->vertex(mesh->edge(mesh->next(h)),1);
-//        if(!mesh->is_removed(f))mesh->remove_face(f);
-//        //cout<<v4<<v5<<v6<<endl;
-//        repairfaces.push_back(v4);
-//        repairfaces.push_back(v);
-//        repairfaces.push_back(v6);
-//        repairfaces.push_back(v5);
-//        repairfaces.push_back(v);
-//        repairfaces.push_back(v6);
-//        mesh->collect_garbage();
-
         for(uint i=0;i<intersected_tris.size();i++)
         {
             Mesh::Face_index f0=intersected_tris[i].first;
@@ -220,22 +140,11 @@ void MeshFix::selfIntersect()
             Mesh::Vertex_index v2(faces[3*i+2]);
             mesh->add_face(v0,v1,v2);
         }
-
-        for(uint i=0;i<repairfaces.size()/3;i++)
-        {
-            Mesh::Vertex_index v0(repairfaces[3*i+0]);
-            Mesh::Vertex_index v1(repairfaces[3*i+1]);
-            Mesh::Vertex_index v2(repairfaces[3*i+2]);
-            cout<<v0<<" "<<v1<<" "<<v2<<endl;
-            if(mesh->add_face(v0,v1,v2)==mesh->null_face())
-            {
-                if(mesh->add_face(v0,v2,v1)==mesh->null_face())
-                    cout<<"can't add face!"<<endl;
-            }
-        }
+//        fixConnectivity();
+//        holeFill();
         intersecting = CGAL::Polygon_mesh_processing::does_self_intersect(*mesh,
                                                 CGAL::Polygon_mesh_processing::parameters::vertex_point_map(get(CGAL::vertex_point, *mesh)));
-        //cout<< (intersecting ? "There are self-intersections." : "There is no self-intersection.")<<endl;
+        cout<< (intersecting ? "There are self-intersections." : "There is no self-intersection.")<<endl;
     }
     cout << "repairing selfintersection done : " <<endl;
     cout << "\t Number of vertices  :\t" << mesh->number_of_vertices()<<endl;

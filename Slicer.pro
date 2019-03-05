@@ -13,8 +13,8 @@ TARGET = Slicer
 TEMPLATE = app
 
 CONFIG += c++11
-CONFIG +=debug
-CONFIG +=release
+#CONFIG +=debug
+#CONFIG +=release
 
 SOURCES += main.cpp\
         mainwindow.cpp \

@@ -207,9 +207,9 @@ void MainWindow::openFile()
         opengl->intrpoints.clear();
 //        opengl->vertices=readstl.vertices;
 //        opengl->indices=readstl.indices;
-        opengl->vertices=dataset.vertices;
-        opengl->indices=dataset.indices;
-        opengl->vertexnormals=dataset.vertexnormals;
+//        opengl->vertices=dataset.vertices;
+//        opengl->indices=dataset.indices;
+//        opengl->vertexnormals=dataset.vertexnormals;
 
     } else {
         QMessageBox::warning(this, tr("Path"),
