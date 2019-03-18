@@ -12,6 +12,8 @@ public:
     vector<Point> normalList;
     vector<uint> indices;
     vector<float> vertices;
+    int modelsize;
+    QString filetype;
 public:
     bool ReadStlFile(const QString filename,dataSet &dataset);
 private:

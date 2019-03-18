@@ -1,15 +1,12 @@
 ﻿#include "Slice.h"
-#include <QFile>
 #include <QTextStream>
 #include <QDebug>
-//#include <CGAL/Polygon_mesh_slicer.h>
 using namespace std;
-Slice::Slice()
+Slice::Slice(QObject *parent):QObject(parent)
 {
     thick=10;
     layernumber=0;
     zheight=0.0f;
-    isParaComp=true;
     findtime=0;
     comptime=0;
 }
@@ -24,59 +21,59 @@ void Slice::startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     findtime=0;
     comptime=0;
     sorttime=0;
-    if(isParaComp)
+    if(sliceType=="CPU")
+    {
+        //sliceByHeight(mesh,zmin,zmax);
+        sliceOnCpu(vertex,halfedge,surroundBox,intrpoints);
+        cout<<"find edge time:"<<findtime<<"ms"<<endl;
+        cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
+        cout<<"cpu compute time:"<<comptime<<"ms"<<endl;
+        cout<<"time of CPU computing:"<<findtime+sorttime+comptime<<"ms"<<endl;
+        emit outputMsg("半边分组时间："+QString::number(findtime)+"ms");
+        emit outputMsg("有序化时间："+QString::number(sorttime)+"ms");
+        emit outputMsg("计算交点时间："+QString::number(comptime)+"ms");
+        emit outputMsg("CPU切片时间："+QString::number(findtime+sorttime+comptime)+"ms");
+        if(genSlicesFile(slicepath[0],intrpoints,surroundBox))
+        {
+            emit outputMsg("成功生成SLC文件到"+slicepath[0]);
+            cout<<"slc file generated successfully."<<endl;
+        }
+    }
+    if(sliceType=="GPU")
     {
         //sliceByGpu(vertex,halfedge,surroundBox,intrpoints);
         sliceOnGpu(vertex,halfedge,surroundBox,intrpoints);
-        if(genSlicesFile(slicepath[1],intrpoints,surroundBox))
-        {
-            cout<<"slc file generated successfully."<<endl;
-        }
         cout<<"find edge time:"<<findtime<<"ms"<<endl;
         cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
         cout<<"gpu compute time:"<<comptime<<"ms"<<endl;
         cout<<"time of parallel computing:"<<findtime+sorttime+comptime<<"ms"<<endl;
-    }
-    else
-    {
-        //sliceByHeight(mesh,zmin,zmax);
-//        sliceByCpu(vertex,halfedge,surroundBox,intrpoints);
-        sliceOnCpu(vertex,halfedge,surroundBox,intrpoints);
-        if(genSlicesFile(slicepath[0],intrpoints,surroundBox))
+        emit outputMsg("半边分组时间："+QString::number(findtime)+"ms");
+        emit outputMsg("有序化时间："+QString::number(sorttime)+"ms");
+        emit outputMsg("计算交点时间："+QString::number(comptime)+"ms");
+        emit outputMsg("GPU切片时间："+QString::number(findtime+sorttime+comptime)+"ms");
+        if(genSlicesFile(slicepath[1],intrpoints,surroundBox))
         {
+            emit outputMsg("成功生成SLC文件到"+slicepath[1]);
             cout<<"slc file generated successfully."<<endl;
         }
+    }
+    if(sliceType=="CPU2")
+    {
+        //sliceByHeight(mesh,zmin,zmax);
+        sliceByCpu(vertex,halfedge,surroundBox,intrpoints);
         cout<<"find edge time:"<<findtime<<"ms"<<endl;
         cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
         cout<<"cpu compute time:"<<comptime<<"ms"<<endl;
-        cout<<"time of cpu computing:"<<findtime+sorttime+comptime<<"ms"<<endl;
-    }
-}
-
-void Slice::sliceByHeight(Mesh mesh,float zmin,float zmax,vector<Polylines> &intrpoints)
-{
-    layernumber=0;
-    Polylines polylines;
-    //CGAL::Polygon_mesh_slicer<Mesh, Kernel> slicer(mesh);
-    zheight=zmin;
-    while(zheight<=zmax)
-    {
-//        progressDlg->setValue(zheight);
-//        if(progressDlg->wasCanceled())
-//        {
-//            layernumber=1;
-//            intrpoints.clear();
-//            QMessageBox::warning(NULL,QStringLiteral("提示"),QStringLiteral("取消切片"));
-//            return;
-//        }
-        //cout<<"layer of "<<layernumber<<":"<<endl;
-        polylines.clear();
-        time.start();
-        //slicer(Kernel::Plane_3(0, 0, 1, double(-zheight)),back_inserter(polylines));
-        comptime +=time.elapsed();
-        layernumber++;
-        intrpoints.push_back(polylines);
-        zheight += thick;
+        cout<<"time of CPU2 computing:"<<findtime+sorttime+comptime<<"ms"<<endl;
+        emit outputMsg("半边分组时间："+QString::number(findtime)+"ms");
+        emit outputMsg("有序化时间："+QString::number(sorttime)+"ms");
+        emit outputMsg("计算交点时间："+QString::number(comptime)+"ms");
+        emit outputMsg("CPU2切片时间："+QString::number(findtime+sorttime+comptime)+"ms");
+        if(genSlicesFile(slicepath[0],intrpoints,surroundBox))
+        {
+            emit outputMsg("成功生成SLC文件到"+slicepath[0]);
+            cout<<"slc file generated successfully."<<endl;
+        }
     }
 }
 
@@ -220,169 +217,6 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     cout<<"intersect edges done!"<<endl;
 }
 
-void Slice::sliceByGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
-{ 
-    z.clear();
-    float zmin=surroundBox[4];
-    float zmax=surroundBox[5];
-    zheight=zmin;
-    layernumber=uint(ceil((zmax-zmin)/thick));
-    //将所有半边分组
-    time.start();
-    size_t total=0;
-    vector<vector<uint>>edges;
-    edges.resize(layernumber+1);
-    for(uint i=0;i<layernumber+1;i++)edges[i].reserve(1000);
-    cl::Buffer vertexbuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,vertex.size()*sizeof(cl_float3),vertex.data());
-    cl::Buffer halfedgebuf(opencl.context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,halfedge.size()*sizeof(cl_uint3),halfedge.data());
-    {
-        vector<int> buf;
-        buf.resize(halfedge.size()*3,-1);
-        opencl.executeKernel(vertexbuf,halfedgebuf,buf,zmin,thick,halfedge.size());
-        for(uint i=0;i<halfedge.size();i++)
-        {
-            //cout<<buf[3*i+0]<<" "<<buf[3*i+1]<<" "<<buf[3*i+2]<<endl;
-            int num1=buf[3*i+0];
-            int num2=buf[3*i+1];
-            //cout<<z1<<" "<<z2<<" "<<num1<<" "<<num2<<endl;    
-            for(int j=num1;j<=num2;j++)
-            {
-                edges[size_t(j)].push_back(i);
-                total++;
-            }
-        }
-    }
-    if(edges[layernumber].empty())edges.pop_back();
-    layernumber=edges.size();
-    z.reserve(layernumber);
-    for(uint i=0;i<layernumber;i++)
-    {
-        z.push_back(zheight);
-        zheight += thick;
-    }
-    findtime +=time.elapsed();
-//    cout<<"total: "<<total<<endl;
-    cout<<"group edges done!"<<endl;
-
-        time.restart();
-        //同组中的半边进行重排序，组成首尾相连的轮廓
-    //    QFile f("C:/Users/xjtu_/Desktop/test.txt");
-    //    if(!f.open(QIODevice::WriteOnly | QIODevice::Text))
-    //    {
-    //        cout << "Open failed." << endl;
-    //    }
-
-       // QTextStream txtOutput(&f);
-        vector<cl_float3>result(total);
-        vector<uint> faceset;
-        vector<uint>linesnumber;
-        linesnumber.resize(layernumber);
-        faceset.reserve(total);
-        vector<uint>edgeset;
-        edgeset.reserve(total);
-        for(uint i=0;i<layernumber;i++)
-        {
-            //cout<<"The "<<i<<" layer:"<<edges[i].size()<<endl;
-            //cout<<edges[i].size()<<endl;
-            //txtOutput<<edges[i].size()<<endl;
-            if(edges[i].empty())
-            {
-                linesnumber[i]=uint(edges[i].size());
-                continue;
-            }
-            if(i>0)
-                linesnumber[i]=uint(edges[i].size())+linesnumber[i-1];
-            else
-                linesnumber[i]=uint(edges[i].size());
-            for(uint j=0;j<edges[i].size();j++)
-            {
-                //cout<<halfedge[edges[i][j]].z<<" ";
-                //txtOutput<<halfedge[edges[i][j]].z<<" ";
-                faceset.push_back(halfedge[edges[i][j]].z);
-                edgeset.push_back(edges[i][j]);
-            }
-            //cout<<endl;
-            //txtOutput<<endl;
-        }
-        //f.close();
-        opencl.executeKernel(vertexbuf,halfedgebuf,edgeset,result,total,layernumber,z.data(),linesnumber);
-        //    for(uint i=0;i<10;i++)
-        //    {
-        //        cout<<result[i].x<<" "<<result[i].y<<" "<<result[i].z<<endl;
-        //    }
-        comptime +=time.elapsed();
-        cout<<"intersect edges done!"<<endl;
-
-        time.restart();
-        Lines lines;
-        Polylines polylines;
-        uint num=0;
-        intrpoints.clear();
-        intrpoints.resize(layernumber);
-        vector<uint> loc;
-        vector<uint>locationdata(faceset.size());
-        vector<uint>loopcount(layernumber);//每层的轮廓环个数
-        vector<uint>loopnumber(layernumber*100);//每层每个轮廓环的点数
-        vector<cl_int3>hashTable(faceset.size()/2,{{-1,-1,-1}});
-        cout <<"total number of edges in all layers: "<< faceset.size() << " memory: " << sizeof(uint)*faceset.size() / 1048576 << "M" << endl;
-        cout << "total number of hashTable in all layers: " <<hashTable.size() << " memory: " << sizeof(cl_int3)*hashTable.size() / 1048576 << "M" << endl;
-        opencl.executeKernel(faceset,linesnumber,hashTable,uint(layernumber),locationdata,loopcount,loopnumber);
-        sorttime =time.elapsed();
-        uint tmp=0;
-        for(uint i=0;i<layernumber;i++)
-        {
-//            cout<<"count of the loops in the layer "<<i<<":";
-//            for(uint j=0;j<loopcount[i];j++)
-//            {
-//                cout<<loopnumber[i*100+j]<<" ";
-//            }
-//            cout<<endl;
-            polylines.clear();
-            polylines.reserve(loopcount[i]);
-            if(i==0)tmp=0;
-            else tmp=linesnumber[i-1];
-            uint offset=0;
-            for(uint k=0;k<loopcount[i];k++)
-            {
-                loc.clear();
-                loc.reserve(loopnumber[i*100+k]);
-                lines.clear();
-                lines.reserve(loopnumber[i*100+k]);
-                if(k==0)offset=0;
-                else offset +=loopnumber[i*100+k-1];
-                //cout<<"    ";
-                for(uint t=0;t<loopnumber[i*100+k];t++)
-                {
-                    //cout<<locationdata[tmp+offset+t]<<" ";
-                    loc.push_back(locationdata[tmp+offset+t]);
-                }
-                //cout<<endl;
-                if(loc.front()==loc.back())
-                {
-                    //cout<<loc.size()<<endl;
-                    loc.pop_back();
-                    for(size_t k=0;k<loc.size();k++)
-                    {
-                        //cout<<location[i][j][k]<<" "<<3*num+3*location[i][j][k]+0<<" "<<3*num+3*location[i][j][k]+1<<endl;
-                        float x=result[num+loc[k]].x;
-                        float y=result[num+loc[k]].y;
-                        //cout<<Point(x,y,z[i])<<endl;
-                        lines.push_back(Point(x,y,z[i]));
-                    }
-                    polylines.push_back(lines);
-                }
-            }
-            if(i==0)
-                num=linesnumber[i];
-            else
-                num +=linesnumber[i]-linesnumber[i-1];
-            intrpoints[i]=polylines;
-        }
-
-    cout<<"sort edges done!"<<endl;
-
-}
-
 bool Slice::genSlicesFile(const QString& fileName,const vector<Polylines> intrpoints,float surroundBox[6])
 {
     char g_arrFileBuff[1*1024*1024];
@@ -452,6 +286,7 @@ bool Slice::genSlicesFile(const QString& fileName,const vector<Polylines> intrpo
     memset(buff, 0xff, 4);
     fwrite(buff,1,4,stream);
     fclose(stream);
+    emit outputMsg("生成SLC文件时间："+QString::number(startTime.msecsTo(QTime::currentTime()))+"ms");
     qDebug()<<"genSlicesFile time:"<< startTime.msecsTo(QTime::currentTime())<<" ms";
     return true;
 }
@@ -497,10 +332,18 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     findtime =time.elapsed();
 //    cout<<"total: "<<total<<endl;
     cout<<"group edges done!"<<endl;
+    emit outputMsg("半边分组完成!");
 
     QTime time2;
     time.restart();
     //同组中的半边进行重排序，组成首尾相连的轮廓
+//    QFile f("C:/Users/xjtu_/Desktop/test.txt");
+//    if(!f.open(QIODevice::WriteOnly | QIODevice::Text))
+//    {
+//        cout << "Open failed." << endl;
+//    }
+//    QTextStream txtOutput(&f);
+
     vector<uint> faceset;
     vector<uint>linesnumber;
     linesnumber.resize(layernumber);
@@ -510,20 +353,25 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     for(uint i=0;i<layernumber;i++)
     {
         //cout<<"The "<<i<<" layer:"<<edges[i].size()<<endl;
-        //cout<<edges[i].size()<<endl;
+//        cout<<edges[i].size()<<endl;
+//        txtOutput<<edges[i].size()<<endl;
         if(i>0)
             linesnumber[i]=uint(edges[i].size())+linesnumber[i-1];
         else
             linesnumber[i]=uint(edges[i].size());
         for(uint j=0;j<edges[i].size();j++)
         {
-            //cout<<halfedge[edges[i][j]].z<<" ";
+//            cout<<halfedge[edges[i][j]].z<<" ";
+//            txtOutput<<halfedge[edges[i][j]].z<<" ";
             faceset.push_back(halfedge[edges[i][j]].z);
         }
-        //cout<<endl;
+//        cout<<endl;
+//        txtOutput<<endl;
+//        txtOutput<<endl;
     }
+//    f.close();
     cout<<"creat faceset time: "<<time2.elapsed()<<endl;
-    vector<uint>locationdata(uint(faceset.size()*1.2),0);
+    vector<uint>locationdata(uint(faceset.size()*1.05),0);
     vector<uint>loopcount(layernumber);//每层的轮廓环个数
     vector<uint>loopnumber(layernumber*LOOPs);//每层每个轮廓环的点数
     vector<cl_int3>hashTable(faceset.size()/2,{{-1,-1,-1}});
@@ -535,9 +383,21 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     cout <<"loopnumber : "<< loopnumber.size() << " memory: " << sizeof(uint)*loopnumber.size() / 1048576 << "M" << endl;
     opencl.executeKernel(faceset,linesnumber,hashTable,uint(layernumber),locationdata,loopcount,loopnumber);
     sorttime =time.elapsed();
-    vector<cl_int3>().swap(hashTable);
+    uint hashoffset=0,edgeoffset=0;
+    for(uint i=0;i<2;i++)
+    {
+        if(i==0)hashoffset=0;
+        else hashoffset=linesnumber[i-1]/2;
+        cout<<"elements in hashTable of layer "<<i<<": "<<linesnumber[i]/2-hashoffset<<endl;
+        for(uint j=0;j<2;j++)
+        {
+            cout<<hashTable[hashoffset+j].x<<": "<<hashTable[hashoffset+j].y<<","<<hashTable[hashoffset+j].z<<endl;
+        }
+    }
+    vector<cl_int4>().swap(hashTable);
     vector<uint>().swap(faceset);
     cout<<"sort edges done!"<<endl;
+    emit outputMsg("有序化完成!");
 
     //计算每组中的半边和相应的z平面求交
     time.restart();
@@ -555,6 +415,8 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
 //            cout<<loopnumber[i*100+j]<<" ";
 //        }
 //        cout<<endl;
+        if(i==0)edgeoffset=0;
+        else edgeoffset=linesnumber[i-1];
         polylines.clear();
         polylines.reserve(loopcount[i]);
         if(i==0)tmp=0;
@@ -589,6 +451,7 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     }
     comptime +=time.elapsed();
     cout<<"intersect edges done!"<<endl;
+    emit outputMsg("计算交点完成!");
 }
 
 void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
@@ -629,6 +492,7 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     layernumber=edges.size();
     findtime =time.elapsed();
     cout<<"group edges done!"<<endl;
+    emit outputMsg("半边分组完成!");
 
     //同组中的半边进行重排序，组成首尾相连的轮廓
     time.restart();
@@ -644,7 +508,7 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             locs.clear();
             if(edges[i].empty())
             {
-                location[i]=locs;
+                //location[i]=locs;
                 continue;
             }
 //            if(edges[i].size()>linesnumber)linesnumber=edges[i].size();
@@ -655,13 +519,16 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             {
                 hashInsert(hashTable,halfedge[edges[i][j]].z,j,length);
             }
-
-//            cout<<"elements in hashtable: "<<endl;
-//            for(uint idx=0;idx!=length;++idx)
+//            if(i<2)
 //            {
-//                cout<<hashTable[idx].x<<": "<<hashTable[idx].y<<","<<hashTable[idx].z<<endl;
+//                cout<<"elements in hashTable of layer "<<i<<": "<<length<<endl;
+//                for(uint idx=0;idx!=length;++idx)
+//                {
+//                    cout<<hashTable[idx].x<<": "<<hashTable[idx].y<<","<<hashTable[idx].z<<endl;
+//                }
+//                cout<<endl;
 //            }
-//            cout<<endl;
+
 
             int index=1,current=0,start=1;
             for(uint k=0;k<length;k++)
@@ -710,7 +577,7 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
                             break;
                         }
                     }
-                    if(loc.front()==loc.back())
+                    if(loc.front()==loc.back() && loc.size()>2)
                     {
                         //cout<<loc.size()<<endl;
                         loc.pop_back();
@@ -718,11 +585,12 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
                     }
                 }
             }
-            location[i]=locs;
+            if(!locs.empty())location[i]=locs;
         }
     }
     sorttime =time.elapsed();
     cout<<"sort edges done!"<<endl;
+    emit outputMsg("有序化完成!");
 
     //计算每组中的半边和相应的z平面求交
     time.restart();
@@ -758,6 +626,7 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     }
     comptime +=time.elapsed();
     cout<<"intersect edges done!"<<endl;
+    emit outputMsg("计算交点完成!");
 }
 
 void Slice::hashInsert(vector<cl_int3>& hashTable,uint key,uint value,uint length)

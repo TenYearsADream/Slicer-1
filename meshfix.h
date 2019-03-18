@@ -1,22 +1,22 @@
 #ifndef MESHFIX_H
 #define MESHFIX_H
 #include "dataset.h"
-
-class MeshFix
+#include <QObject>
+class MeshFix: public QObject
 {
+    Q_OBJECT
 public:
-    MeshFix(Mesh *_mesh);
+    explicit MeshFix(QObject *parent=0);
     ~MeshFix();
-    void repair();
-
+    void repair(Mesh &mesh);
+signals:
+    void outputMsg(QString);
 private:
-    void fixConnectivity();
-    void stitchBorders();
-    void holeFill();
-    void normalRepair();
-    void selfIntersect();
-private:
-    Mesh *mesh;
+    void fixConnectivity(Mesh *mesh);
+    void stitchBorders(Mesh *mesh);
+    void holeFill(Mesh *mesh);
+    void normalRepair(Mesh *mesh);
+    void selfIntersect(Mesh *mesh);
 };
 
 #endif // MESHFIX_H

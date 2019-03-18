@@ -1,57 +1,36 @@
 ﻿#include <QAction>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QCloseEvent>
 #include <QStatusBar>
 #include <QTextEdit>
 #include <QFileDialog>
-#include <QFile>
-#include <QTextStream>
 #include <QHBoxLayout>
-#include <QPushButton>
-#include <QTableWidget>
-#include <QSplitter>
-#include <QTableView>
 #include <QDebug>
-#include <QTime>
-#include <QLabel>
+#include <QTimer>
+#include <QDateTime>
 #include <QProgressDialog>
-#include <QThread>
 #include <iostream>
-#include <CGAL/Polygon_mesh_processing/compute_normal.h>
 #include "windows.h"
 #include "mainwindow.h"
-#include "hierarchicalclustering.h"
 #include "Slice.h"
-#include "meshfix.h"
+
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
 {
     setWindowTitle(tr("Slicer"));
     setMinimumSize(1000,640);
+    initStatusBar();
 
-    openAction = new QAction(QIcon(":/images/resource/open-file.png"), tr("&Open..."), this);
-    openAction->setShortcuts(QKeySequence::Open);
-    openAction->setStatusTip(tr("Open an existing file"));
-    connect(openAction, &QAction::triggered, this, &MainWindow::openFile);
-    QMenu *file = menuBar()->addMenu(tr("&File"));
-    file->addAction(openAction);
-
-    saveStl = new QAction(QIcon(":/images/resource/save-file.png"), tr("&Save..."), this);
-    saveStl->setShortcuts(QKeySequence::Save);
-    saveStl->setStatusTip(tr("Save the model"));
-    connect(saveStl, &QAction::triggered, this, &MainWindow::saveFile);
-    file->addAction(saveStl);
-
-
-    statusBar() ;
+    initMenuWidget();
     QWidget *cenWidget = new QWidget(this); //this is point to QMainWindow
     this->setCentralWidget(cenWidget);
 
     opengl= new MyGLWidget(cenWidget);
-    QWidget *toolWidget=new QWidget(cenWidget);
+    toolWidget=new QWidget(cenWidget);
     QHBoxLayout *mainlayout = new QHBoxLayout(cenWidget);
-    QVBoxLayout *toollayout = new QVBoxLayout();
+    toollayout = new QVBoxLayout();
     cenWidget->setLayout(mainlayout);
     mainlayout->addWidget(opengl);
     mainlayout->addWidget(toolWidget);
@@ -60,17 +39,66 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     mainlayout->setStretchFactor(toolWidget,2);
 
     //模型摆放布局
+    initPlaceWidget();
+    //分层显示布局
+    initSliceWidget();
+    //模型分割布局
+    initSegmentWidget();
+
+    //日志打印窗口
+    logEdit = new QTextEdit("slicer");
+    toollayout->addWidget(logEdit);
+    connect(this,SIGNAL(outputMsg(QString)),logEdit,SLOT(append(QString)));
+    connect(&slice,SIGNAL(outputMsg(QString)),logEdit,SLOT(append(QString)),Qt::DirectConnection);
+    connect(&meshfix,SIGNAL(outputMsg(QString)),logEdit,SLOT(append(QString)));
+
+    emit outputMsg("Device: "+QString::fromStdString(slice.opencl.deviceinfo.deviceName));
+    emit outputMsg("Parallel compute units: "+QString::number(slice.opencl.deviceinfo.maxComputeUnits));
+    emit outputMsg("maxLocalMemSize: "+QString::number(slice.opencl.deviceinfo.maxLocalMemSize)+"KB");
+    emit outputMsg("maxMemAllocSize: "+QString::number(slice.opencl.deviceinfo.maxMemAllocSize)+"MB");
+    emit outputMsg("maxGlobalMemSize: "+QString::number(slice.opencl.deviceinfo.maxGlobalMemSize)+"MB");
+    emit outputMsg("maxWorkItemPerGroup: "+QString::number(slice.opencl.deviceinfo.maxWorkItemPerGroup));
+    emit outputMsg("maxConstantBufferSize: "+QString::number(slice.opencl.deviceinfo.maxConstantBufferSize)+"KB");
+}
+
+MainWindow::~MainWindow()
+{
+    delete(openAction);
+    delete(opengl);
+}
+
+void MainWindow::initStatusBar()
+{
+    statusLabel = new QLabel; //新建标签
+    currentTimeLabel = new QLabel;
+
+    statusLabel->setMinimumSize(statusLabel->sizeHint()); //设置标签最小尺寸
+    statusLabel->setAlignment(Qt::AlignCenter);
+//    statusLabel->setFrameShape(QFrame::WinPanel); //设置标签形状
+//    statusLabel->setFrameShadow(QFrame::Sunken); //设置标签阴影
+
+    statusBar()->addWidget(statusLabel);
+    statusLabel->setText(tr("ready")); //初始化内容
+    QTimer *timer = new QTimer(this);
+    timer->start(1000); //每隔1000ms发送timeout的信号
+    connect(timer, SIGNAL(timeout()),this,SLOT(timeUpdate()));
+    statusBar()->addPermanentWidget(currentTimeLabel); //现实永久信息
+
+}
+
+void MainWindow::initPlaceWidget()
+{
     QLabel *placeLablex = new QLabel();
     placeLablex->setText("Degree of rotation around X axis:");
-    placeSpinBoxx = new QSpinBox();
+    QSpinBox *placeSpinBoxx = new QSpinBox();
     placeSpinBoxx->setRange(-360, 360);  // 范围
     QLabel *placeLabley = new QLabel();
     placeLabley->setText("Degree of rotation around Y axis:");
-    placeSpinBoxy = new QSpinBox();
+    QSpinBox *placeSpinBoxy = new QSpinBox();
     placeSpinBoxy->setRange(-360, 360);  // 范围
     QLabel *placeLablez = new QLabel();
     placeLablez->setText("Degree of rotation around Z axis:");
-    placeSpinBoxz = new QSpinBox();
+    QSpinBox *placeSpinBoxz = new QSpinBox();
     placeSpinBoxz->setRange(-360, 360);  // 范围
     QPushButton *placeButton = new QPushButton(tr("place"));
     connect(placeButton,SIGNAL(clicked()),this,SLOT(modelPlace()));
@@ -97,23 +125,44 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     modelsetQWidget->setLayout(modellayout);
     toollayout->addWidget(modelsetQWidget);
     toollayout->setStretchFactor(modelsetQWidget,4);
+}
 
-    //分层显示布局
-    sliceSpinBox = new QDoubleSpinBox(cenWidget);
+void MainWindow::initSegmentWidget()
+{
+    segSpinBox = new QDoubleSpinBox(this);
+    segSpinBox->setRange(0.1, 20);  // 范围
+    segSpinBox->setDecimals(2);  // 精度
+    segSpinBox->setSingleStep(0.01); // 步长
+    QPushButton *segmentButton = new QPushButton(tr("segment"),(this));
+//    connect(segmentButton,SIGNAL(clicked()),this,SLOT(modelSegment()));
+    QWidget *segmentQWidget=new QWidget(toolWidget);
+    QHBoxLayout *segmentlayout = new QHBoxLayout();
+    segmentlayout->addWidget(segmentButton,0,Qt::AlignCenter);
+    segmentlayout->addWidget(segSpinBox,0,Qt::AlignCenter);
+    segmentQWidget->setLayout(segmentlayout);
+    toollayout->addWidget(segmentQWidget);
+    toollayout->setStretchFactor(segmentQWidget,2);
+}
+
+void MainWindow::initSliceWidget()
+{
+    sliceSpinBox = new QDoubleSpinBox(this);
     sliceSpinBox->setRange(0.01, 20);  // 范围
     sliceSpinBox->setDecimals(2);  // 精度
     sliceSpinBox->setSingleStep(0.05); // 步长
-    QPushButton *sliceButton = new QPushButton(tr("slice"),(cenWidget));
+    QPushButton *sliceButton = new QPushButton(tr("slice"));
     connect(sliceButton,SIGNAL(clicked()),this,SLOT(modelSlice()));
     layerSlider = new QSlider(Qt::Horizontal);
     QLabel *layerLable = new QLabel();
     layerLable->setText("layer:");
-    layerSpinBox=new QSpinBox(cenWidget);
+    layerSpinBox=new QSpinBox(this);
     layerSpinBox->setValue(0);
     isAdapt = new QCheckBox();
     isAdapt->setText("adapt slice");
-    isParaComp = new QCheckBox();
-    isParaComp->setText("Parallel computing");
+    comboBox = new QComboBox(this);
+    comboBox->addItem(tr("CPU"));
+    comboBox->addItem(tr("GPU"));
+    comboBox->addItem(tr("CPU2"));
     QWidget *layerQWidget=new QWidget(toolWidget);
     //layerQWidget->setStyleSheet("background-color:green;");
     QVBoxLayout *layerlayout = new QVBoxLayout();
@@ -122,7 +171,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     layerlayout1->addWidget(sliceSpinBox,0,Qt::AlignCenter);
     QHBoxLayout *layerlayout2 = new QHBoxLayout();
     layerlayout2->addWidget(isAdapt,0,Qt::AlignCenter);
-    layerlayout2->addWidget(isParaComp,0,Qt::AlignCenter);
+    layerlayout2->addWidget(comboBox,0,Qt::AlignCenter);
     QHBoxLayout *layerlayout3 = new QHBoxLayout();
     layerlayout3->addWidget(layerLable);
     layerlayout3->addWidget(layerSlider);
@@ -136,41 +185,51 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     layerlayout->addLayout(layerlayout3);
     toollayout->addWidget(layerQWidget);
     toollayout->setStretchFactor(layerQWidget,4);
-
-    //模型分割布局
-    segSpinBox = new QDoubleSpinBox(cenWidget);
-    segSpinBox->setRange(0.1, 20);  // 范围
-    segSpinBox->setDecimals(2);  // 精度
-    segSpinBox->setSingleStep(0.01); // 步长
-    QPushButton *segmentButton = new QPushButton(tr("segment"),(cenWidget));
-    connect(segmentButton,SIGNAL(clicked()),this,SLOT(modelSegment()));
-    QWidget *segmentQWidget=new QWidget(toolWidget);
-    QHBoxLayout *segmentlayout = new QHBoxLayout();
-    segmentlayout->addWidget(segmentButton,0,Qt::AlignCenter);
-    segmentlayout->addWidget(segSpinBox,0,Qt::AlignCenter);
-    segmentQWidget->setLayout(segmentlayout);
-    toollayout->addWidget(segmentQWidget);
-    toollayout->setStretchFactor(segmentQWidget,2);
-
-    setStatusTip(tr("ready"));
 }
 
-MainWindow::~MainWindow()
+void MainWindow::initMenuWidget()
 {
-    delete(openAction);
-    delete(opengl);
-    delete(shapediameterfunction);
+    QMenu *file = menuBar()->addMenu(tr("&File"));
+    openAction = new QAction(QIcon(":/images/resource/open-file.png"), tr("&Open..."), this);
+    openAction->setShortcuts(QKeySequence::Open);
+    openAction->setStatusTip(tr("Open an existing file"));
+    connect(openAction,&QAction::triggered,this,&MainWindow::openFile);
+    file->addAction(openAction);
+    saveStl = new QAction(QIcon(":/images/resource/save-file.png"), tr("&Save..."), this);
+    saveStl->setShortcuts(QKeySequence::Save);
+    saveStl->setStatusTip(tr("Save the model"));
+    connect(saveStl,&QAction::triggered,this,&MainWindow::saveFile);
+    file->addAction(saveStl);
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) //系统自带退出确定程序
+{
+    int choose;
+    choose= QMessageBox::question(this, tr("退出程序"),
+                                   QString(tr("确认退出程序?")),
+                                   QMessageBox::Yes | QMessageBox::No);
+
+    if (choose== QMessageBox::No)
+     {
+          event->ignore();  //忽略//程序继续运行
+    }
+    else if (choose== QMessageBox::Yes)
+    {
+          event->accept();  //接受//程序退出
+    }
 }
 
 
 void MainWindow::openFile()
 {
+    statusLabel->setText(tr("opening..."));
     QFileInfo fileinfo;
     QString path = QFileDialog::getOpenFileName(this,
                                                 tr("Open File"),
                                                 ".",
                                                tr("Text Files(*.stl)"));    
     if(!path.isEmpty()) {
+
         QTime time;
         time.start();
         dataset.mesh.clear();
@@ -182,20 +241,33 @@ void MainWindow::openFile()
         if(!readstl.ReadStlFile(path,dataset))
         {
             cout<<"Failed to read STL file!"<<endl;
+            statusLabel->setText(tr("Failed to read STL file!"));
             return;
         }
-        qDebug()<<"time of readstl:"<<time.elapsed()/1000.0<<"s";        
+        emit outputMsg(path);
+        emit outputMsg("模型大小："+QString::number(readstl.modelsize)+"M");
+        emit outputMsg("文件类型："+readstl.filetype);
+        int readtime=time.elapsed()/1000;
+        emit outputMsg("读取STL模型时间:"+QString::number(readtime)+"s");
+        emit outputMsg("顶点数:"+QString::number(dataset.mesh.number_of_vertices()));
+        emit outputMsg("边个数:"+QString::number(dataset.mesh.number_of_edges()));
+        emit outputMsg("面片数:"+QString::number(dataset.mesh.number_of_faces()));
+        emit outputMsg("法向量数:"+QString::number(readstl.normalList.size()));
+        qDebug()<<"time of readstl:"<<readtime<<"s";
         qDebug()<<"number of vertices:"<<dataset.mesh.number_of_vertices();
         qDebug()<<"number of edges:"<<dataset.mesh.number_of_edges();
         qDebug()<<"number of faces:"<<dataset.mesh.number_of_faces();
         qDebug()<<"number of normals:"<<readstl.normalList.size();
+        vector<Point>().swap(readstl.normalList);
         dataset.halfedgeOnGpu();
         dataset.getIndices();
-        //dataset.mesh.clear();
+        dataset.mesh.clear();
         float x=dataset.surroundBox[1]-dataset.surroundBox[0];
         float y=dataset.surroundBox[3]-dataset.surroundBox[2];
         float z=dataset.surroundBox[5]-dataset.surroundBox[4];
+        emit outputMsg("模型包围盒:"+QString("%1").arg(x)+"*"+QString("%1").arg(y)+"*"+QString("%1").arg(z)+"mm");
         qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
+        statusLabel->setText(tr("open file success"));
         opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0f;
         opengl->ytrans=(dataset.surroundBox[2]+dataset.surroundBox[3])/2.0f;
         opengl->ztrans=-z;
@@ -207,9 +279,21 @@ void MainWindow::openFile()
         opengl->intrpoints.clear();
 //        opengl->vertices=readstl.vertices;
 //        opengl->indices=readstl.indices;
-//        opengl->vertices=dataset.vertices;
-//        opengl->indices=dataset.indices;
-//        opengl->vertexnormals=dataset.vertexnormals;
+        if(dataset.vertices.empty())
+        {
+            cout<<"can't simplify mesh."<<endl;
+            emit outputMsg("模型不能简化，不显示模型");
+        }
+        else
+        {
+            opengl->vertices=dataset.vertices;
+            opengl->indices=dataset.indices;
+            opengl->vertexnormals=dataset.vertexnormals;
+            vector<uint>().swap(dataset.indices);
+            vector<float>().swap(dataset.vertices);
+            vector<float>().swap(dataset.vertexnormals);
+        }
+
 
     } else {
         QMessageBox::warning(this, tr("Path"),
@@ -220,83 +304,37 @@ void MainWindow::openFile()
 void MainWindow::saveFile()
 {
     qDebug()<<"start save file...";
+    statusLabel->setText(tr("saveing..."));
+	emit outputMsg("开始保存模型...");
     QString stlfileName=slicepath+"_repaired.stl";
-    QFile file(stlfileName);
-    if(!file.open(QIODevice::WriteOnly))
-    {
-        qDebug() << "Can't open file for writing";
-    }
-    char name[80]="1234";
-    char attribute[2]="w";
-    file.write(name,sizeof(name));
-    uint facesnumber=dataset.mesh.number_of_faces();
-    float x,y,z;
-    file.write((char*)(&facesnumber),4);
-    auto fnormals =dataset.mesh.add_property_map<Mesh::Face_index, Vector>("f:normals", CGAL::NULL_VECTOR).first;
-    CGAL::Polygon_mesh_processing::compute_face_normals(dataset.mesh,fnormals,
-           CGAL::Polygon_mesh_processing::parameters::vertex_point_map(dataset.mesh.points()).geom_traits(Kernel()));
-    for(Mesh::Face_index f:dataset.mesh.faces())
-    {
-        //cout<<f<<"--"<<endl;
-        //cout<<fnormals[f]<<endl;
-        x=fnormals[f].x();y=fnormals[f].y();z=fnormals[f].z();
-        file.write((char*)&x,4);
-        file.write((char*)&y,4);
-        file.write((char*)&z,4);
-        BOOST_FOREACH(Mesh::Vertex_index vd,vertices_around_face(dataset.mesh.halfedge(f),dataset.mesh))
-        {
-           //cout <<dataset.mesh.point(vd)<<endl;
-           x=dataset.mesh.point(vd).x();y=dataset.mesh.point(vd).y();z=dataset.mesh.point(vd).z();
-           file.write((char*)&x,4);
-           file.write((char*)&y,4);
-           file.write((char*)&z,4);
-         }
-        file.write(attribute,2);
-    }
-    file.close();
+    dataset.exportSTL(stlfileName);
     qDebug()<<"save file to"<<stlfileName;
-}
-
-void MainWindow::modelSegment()
-{
-    opengl->intrpoints.clear();
-    HierarchicalClustering hierarchicalclustering;
-    double esp=segSpinBox->value();
-    if(!dataset.mesh.is_empty())
-    {
-        vector<vector<double>> charValue=shapediameterfunction->calculateSDF(dataset.mesh);
-//        for(int i=0;i<charValue.size();i++)
-//        {
-//            cout<<charValue[i][0]<<" "<<charValue[i][1]<<endl;
-//        }
-        opengl->clusterTable=hierarchicalclustering.Cluster(charValue,esp);
-
-    } else {
-        QMessageBox::warning(this, tr("error"),
-                             tr("You did not import any model."));
-    }
-
+	emit outputMsg("模型保存到"+stlfileName+".");
+    statusLabel->setText(tr("save file success"));
 }
 
 void MainWindow::modelSlice()
 {
+    statusLabel->setText(tr("slicing..."));
     opengl->clusterTable.clear();
     opengl->intrpoints.clear();
     layerSlider->setValue(1);
     slice.thick=float(sliceSpinBox->value());
     slice.isAdapt=isAdapt->isChecked();
-    slice.isParaComp=isParaComp->isChecked();
+    slice.sliceType=comboBox->currentText();
     if(!dataset.halfedgeset.empty())
     {
-        cout<<"start slice"<<endl;
+        cout<<"start slice"<<endl;        
+		emit outputMsg("开始分层……");
         slice.startSlice(dataset.vertexset,dataset.halfedgeset,dataset.surroundBox,opengl->intrpoints);
+		emit outputMsg("分层数："+QString::number(slice.layernumber));
         if(slice.isAdapt)
             cout<<"number of layers with adapt:"<<slice.layernumber<<endl;
         else
             cout<<"number of layers without adapt:"<<slice.layernumber<<endl;
         layerSlider->setRange(1,int(slice.layernumber));
         layerSpinBox->setRange(1,int(slice.layernumber));
-
+        statusLabel->setText(tr("slice finished."));
     } else {
         QMessageBox::warning(this, tr("error"),
                              tr("You did not import any model."));
@@ -318,6 +356,8 @@ void MainWindow::modelPlace()
         opengl->ztrans=1.0f/(qMax(qAbs(dataset.surroundBox[4]),qAbs(dataset.surroundBox[5])));
         opengl->vertices=dataset.vertices;
         opengl->indices=dataset.indices;
+        vector<uint>().swap(dataset.indices);
+        vector<float>().swap(dataset.vertices);
 
     } else {
         QMessageBox::warning(this, tr("error"),
@@ -328,24 +368,40 @@ void MainWindow::modelPlace()
 
 void MainWindow::modelRepair()
 {
+    statusLabel->setText(tr("repairing..."));
     QTime time;
     time.start();
-    MeshFix meshfix=MeshFix(&dataset.mesh);
+    meshfix.repair(dataset.mesh);
     dataset.halfedgeOnGpu();
     dataset.getIndices();
+    emit outputMsg("修复模型时间:"+QString::number(time.elapsed()/1000.0)+"s");
     qDebug()<<"time of repairing the model:"<<time.elapsed()/1000.0<<"s";
     qDebug()<<"number of vertices after repairing:"<<dataset.mesh.number_of_vertices();
     qDebug()<<"number of edges after repairing:"<<dataset.mesh.number_of_edges();
     qDebug()<<"number of faces after repairing:"<<dataset.mesh.number_of_faces();
+    emit outputMsg("顶点数:"+QString::number(dataset.mesh.number_of_vertices()));
+    emit outputMsg("边个数:"+QString::number(dataset.mesh.number_of_edges()));
+    emit outputMsg("面片数:"+QString::number(dataset.mesh.number_of_faces()));
     float x=dataset.surroundBox[1]-dataset.surroundBox[0];
     float y=dataset.surroundBox[3]-dataset.surroundBox[2];
     float z=dataset.surroundBox[5]-dataset.surroundBox[4];
+    emit outputMsg("模型包围盒:"+QString("%1").arg(x)+"*"+QString("%1").arg(y)+"*"+QString("%1").arg(z)+"mm");
     qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
+    statusLabel->setText(tr("repair finished."));
     opengl->vertices.clear();
     opengl->indices.clear();
     opengl->vertexnormals.clear();
     opengl->vertices=dataset.vertices;
     opengl->indices=dataset.indices;
     opengl->vertexnormals=dataset.vertexnormals;
+    vector<uint>().swap(dataset.indices);
+    vector<float>().swap(dataset.vertices);
+    vector<float>().swap(dataset.vertexnormals);
 }
 
+void MainWindow::timeUpdate()
+{
+    QDateTime current_time = QDateTime::currentDateTime();
+    QString timestr = current_time.toString( "yyyy/MM/dd hh:mm:ss"); //设置显示的格式
+    currentTimeLabel->setText(timestr); //设置label的文本内容为时间
+}

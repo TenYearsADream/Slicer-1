@@ -1,6 +1,17 @@
 ﻿#include "dataset.h"
 #include <QMatrix4x4>
+#include <QTime>
+#include <QFile>
 #include <CGAL/Polygon_mesh_processing/compute_normal.h>
+
+// Simplification function
+#include <CGAL/Surface_mesh_simplification/edge_collapse.h>
+// Stop-condition policy
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_stop_predicate.h>
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_length_cost.h>
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Midpoint_placement.h>
+
+
 dataSet::dataSet()
 {
     mesh.clear();
@@ -13,25 +24,12 @@ dataSet::~dataSet()
 
 void dataSet::getIndices()
 {
-    vertexnormals.clear();
-    if(CGAL::is_closed(mesh))
-    {
-        computeVertexnormals();
-    }
-    vertices.clear();
-    indices.clear();
-    vertices.reserve(3*mesh.number_of_vertices());
-    indices.reserve(3*mesh.number_of_faces());
     vector<float>X,Y,Z;
     X.reserve(mesh.number_of_vertices());
     Y.reserve(mesh.number_of_vertices());
     Z.reserve(mesh.number_of_vertices());
     for(Mesh::Vertex_index v:mesh.vertices())
     {
-        //cout<<point.x()<<" "<<point.y()<<" "<<point.z()<<endl;
-        vertices.push_back(float(mesh.point(v).x()));
-        vertices.push_back(float(mesh.point(v).y()));
-        vertices.push_back(float(mesh.point(v).z()));
         X.push_back(float(mesh.point(v).x()));
         Y.push_back(float(mesh.point(v).y()));
         Z.push_back(float(mesh.point(v).z()));
@@ -42,15 +40,68 @@ void dataSet::getIndices()
     surroundBox[3]=*max_element(Y.begin(),Y.end());
     surroundBox[4]=*min_element(Z.begin(),Z.end());
     surroundBox[5]=*max_element(Z.begin(),Z.end());
-    for(Mesh::Face_index f:mesh.faces())
+
+    Mesh meshforGL(mesh);
+    bool success;
+//    cout<<meshforGL.number_of_faces()<<endl;
+    // This is a stop predicate (defines when the algorithm terminates).
+    // In this example, the simplification stops when the number of undirected edges
+    // left in the surface mesh drops below the specified number (50000)
+    QTime time;
+    time.start();
+    CGAL::Surface_mesh_simplification::Count_stop_predicate<Mesh> stop(10000);
+    try
     {
-        CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
-        for(boost::tie(vbegin, vend) = vertices_around_face(mesh.halfedge(f), mesh);vbegin != vend;++vbegin)
+        int r=CGAL::Surface_mesh_simplification::edge_collapse
+                (meshforGL,stop
+                 ,CGAL::parameters::vertex_index_map(get(CGAL::vertex_point,meshforGL))
+                                   .halfedge_index_map  (get(CGAL::halfedge_index  ,meshforGL))
+                                   .get_cost (CGAL::Surface_mesh_simplification::Edge_length_cost <Mesh>())
+                                   .get_placement(CGAL::Surface_mesh_simplification::Midpoint_placement<Mesh>())
+                );
+        cout << "Finished in "<<time.elapsed()<<"ms. " << r << " edges removed.  "<<meshforGL.number_of_halfedges()/2<< " final edges."<<endl;
+        if(meshforGL.number_of_halfedges()/2>10000)
         {
-            indices.push_back(uint(*vbegin));
-            //cout<<ushort(*vbegin)<<" ";
+            success=false;
         }
-        //cout<<endl;
+        else
+        {
+            success=true;
+        }
+
+    }
+    catch(exception& e)
+    {
+        cout<<"can't simplify mesh."<<e.what()<<endl;
+        success=false;
+    }
+    if(success)
+    {
+        vertexnormals.clear();
+        if(CGAL::is_closed(meshforGL))
+        {
+            computeVertexnormals();
+        }
+        vertices.clear();
+        indices.clear();
+        vertices.reserve(3*meshforGL.number_of_vertices());
+        indices.reserve(3*meshforGL.number_of_faces());
+        for(Mesh::Vertex_index v:meshforGL.vertices())
+        {
+            vertices.push_back(float(meshforGL.point(v).x()));
+            vertices.push_back(float(meshforGL.point(v).y()));
+            vertices.push_back(float(meshforGL.point(v).z()));
+        }
+        for(Mesh::Face_index f:meshforGL.faces())
+        {
+            CGAL::Vertex_around_face_iterator<Mesh> vbegin, vend;
+            for(boost::tie(vbegin, vend) = vertices_around_face(meshforGL.halfedge(f), meshforGL);vbegin != vend;++vbegin)
+            {
+                indices.push_back(uint(*vbegin));
+    //            cout<<ushort(*vbegin)<<" ";
+            }
+    //        cout<<endl;
+        }
     }
 }
 
@@ -130,41 +181,15 @@ void dataSet::halfedgeOnGpu()
         Mesh::Vertex_index v0=mesh.vertex(mesh.edge(hi),0);
         Mesh::Vertex_index v1=mesh.vertex(mesh.edge(hi),1);
         Mesh::Face_index f=mesh.face(hi);
+//        if(!f.is_valid())
+//        {
+//            cout<<f<<endl;
+//        }
         h.x=v0;
         h.y=v1;
         h.z=f;
         halfedgeset.push_back(h);
     }
-
-//    for(Mesh::Face_index fi:mesh.faces())
-//    {
-//        Mesh::Halfedge_index e0,e1,e2;
-//        e0=mesh.halfedge(fi);
-//        e1=mesh.next(e0);
-//        e2=mesh.next(e1);
-//        //cout<<fi<<" "<<e0<<" "<<e1<<" "<<e2<<endl;
-//        cl_uint3 f;
-//        f.x=e0;
-//        f.y=e1;
-//        f.z=e2;
-//        faceset.push_back(f);
-//    }
-//    for(Mesh::Halfedge_index hi:mesh.halfedges())
-//    {
-//        Mesh::Halfedge_index hpre=mesh.prev(hi);
-//        Mesh::Halfedge_index hnext=mesh.next(hi);
-//        Mesh::Halfedge_index hopposite=mesh.opposite(hi);
-//        Mesh::Vertex_index vertex0=mesh.vertex(mesh.edge(hi),0);
-//        Mesh::Vertex_index vertex1=mesh.vertex(mesh.edge(hi),1);
-//        Mesh::Face_index f=mesh.face(hi);
-//        Point p1=mesh.point(vertex0);
-//        Point p2=mesh.point(vertex1);
-//        float zmin=float(qMin(p1.z(),p2.z()));
-//        float zmax=float(qMax(p1.z(),p2.z()));
-//        //cout<<zmax<<" "<<zmin<<" "<<hi<<" "<<vertex0<<" "<<vertex1<<" "<<hpre<<" "<<hnext<<" "<<hopposite<<" "<<f<<endl;
-//        Edge e={zmax,zmin,vertex0,vertex1,hpre,hnext,hopposite,hi,f};
-//        edgeset.insert(make_pair(zmax,e));
-//    }
 }
 
 void dataSet::computeVertexnormals()
@@ -180,4 +205,41 @@ void dataSet::computeVertexnormals()
         vertexnormals.push_back(float(vnormals[vd].y()));
         vertexnormals.push_back(float(vnormals[vd].z()));
     }
+}
+
+void dataSet::exportSTL(const QString stlfileName)
+{
+    QFile file(stlfileName);
+    if(!file.open(QIODevice::WriteOnly))
+    {
+        qDebug() << "Can't open file for writing";
+    }
+    char name[80]="1234";
+    char attribute[2]="w";
+    file.write(name,sizeof(name));
+    uint facesnumber=mesh.number_of_faces();
+    float x,y,z;
+    file.write((char*)(&facesnumber),4);
+    auto fnormals =mesh.add_property_map<Mesh::Face_index, Vector>("f:normals", CGAL::NULL_VECTOR).first;
+    CGAL::Polygon_mesh_processing::compute_face_normals(mesh,fnormals,
+           CGAL::Polygon_mesh_processing::parameters::vertex_point_map(mesh.points()).geom_traits(Kernel()));
+    for(Mesh::Face_index f:mesh.faces())
+    {
+        //cout<<f<<"--"<<endl;
+        //cout<<fnormals[f]<<endl;
+        x=fnormals[f].x();y=fnormals[f].y();z=fnormals[f].z();
+        file.write((char*)&x,4);
+        file.write((char*)&y,4);
+        file.write((char*)&z,4);
+        BOOST_FOREACH(Mesh::Vertex_index vd,vertices_around_face(mesh.halfedge(f),mesh))
+        {
+           //cout <<dataset.mesh.point(vd)<<endl;
+           x=mesh.point(vd).x();y=mesh.point(vd).y();z=mesh.point(vd).z();
+           file.write((char*)&x,4);
+           file.write((char*)&y,4);
+           file.write((char*)&z,4);
+         }
+        file.write(attribute,2);
+    }
+    file.close();
 }

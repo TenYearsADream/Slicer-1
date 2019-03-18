@@ -3,6 +3,17 @@
 #include <CL/cl.hpp>
 #include <vector>
 using namespace std;
+struct DeviceInfo{
+    string deviceName;
+    int maxComputeUnits;
+    int maxWorkItemPerGroup;
+    int maxConstantBufferSize;
+    int maxGlobalMemSize;
+    int maxLocalMemSize;
+    int maxMemAllocSize;
+};
+
+
 class OpenCL
 {
 public:
@@ -13,6 +24,7 @@ public:
     void executeKernel(cl::Buffer vertexbuf,cl::Buffer halfedgebuf,vector<unsigned int>edgeset,vector<cl_float3>&result,size_t total,size_t LAYERNUMBER,float *zheight,vector<unsigned int>linesnumber);
     void executeKernel(vector<unsigned int> edges,vector<unsigned int>linesnumber,vector<cl_int3>&hashTable,unsigned int layernumber,
                        vector<unsigned int>&location,vector<unsigned int>&loopcount,vector<unsigned int>&loopnumber);
+    DeviceInfo deviceinfo;
 public:
     cl::CommandQueue queue;
     cl::Kernel capbyheight,calalledges,groupedge,intersect,hashfind;

@@ -26,6 +26,8 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
         if(header[0]=='s')
         {
             cout<<"File is ASCII"<<endl;
+            filetype="ASCII";
+            modelsize=int(file.size()/1048576);
             qDebug() <<"内存大小："<< file.size()/1048576<<"M";
             buffer=file.map(0,file.size());
             if(buffer)
@@ -42,6 +44,8 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
         else
         {
             cout<<"File is Binary"<<endl;
+            filetype="Binary";
+            modelsize=int(file.size()/1048576);
             qDebug() <<"内存大小："<< file.size()/1048576<<"M";
             buffer=file.map(0,file.size());
             if(buffer)
@@ -56,6 +60,7 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
         }
         file.unmap(buffer);
         file.close();
+        verticesmap.clear();
         return true;
     }
     else
@@ -69,6 +74,7 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
 {
     float x=0,y=0,z=0;
     uint index=0;
+    Point normal,p0,p1,p2,ab,bc,nor;
     QString strx(" "),stry(" "),strz(" "),key(" ");
     char name[80];
     uint *point=new uint[3]();
@@ -83,6 +89,7 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
     //读取三角形面片
     for (uint i = 0; i <numberTriangles; i++)
     {
+//        cout<<i<<endl;
         memcpy(&x,buffer, 4);buffer +=4;
         memcpy(&y,buffer, 4);buffer +=4;
         memcpy(&z,buffer, 4);buffer +=4;
@@ -105,10 +112,20 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
             index=addPoint(key,Point(x,y,z),dataset);
             point[j]=index;
         }
-        Mesh::Vertex_index vx(point[0]);
-        Mesh::Vertex_index vy(point[1]);
-        Mesh::Vertex_index vz(point[2]);
-        dataset.mesh.add_face(vx,vy,vz);
+        Mesh::Vertex_index v0(point[0]);
+        Mesh::Vertex_index v1(point[1]);
+        Mesh::Vertex_index v2(point[2]);
+        dataset.mesh.add_face(v0,v1,v2);
+//        p0=dataset.mesh.point(v0);
+//        p1=dataset.mesh.point(v1);
+//        p2=dataset.mesh.point(v2);
+//        ab=Point(p0.x()-p1.x(),p0.y()-p1.y(),p0.z()-p1.z());
+//        bc=Point(p1.x()-p2.x(),p1.y()-p2.y(),p1.z()-p2.z());
+//        nor=Point(ab.y()*bc.z()-bc.y()*ab.z(),bc.x()*ab.z()-ab.x()*bc.z(),ab.x()*bc.y()-bc.x()*ab.y());
+//        if((normal.x()*nor.x()+normal.y()*nor.y()+normal.z()*nor.z())<0)
+//            dataset.mesh.add_face(v0,v1,v2);
+//        else
+//            dataset.mesh.add_face(v0,v2,v1);
 //        indices.push_back(ushort(point[0]));
 //        indices.push_back(ushort(point[1]));
 //        indices.push_back(ushort(point[2]));
@@ -186,19 +203,20 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
         Mesh::Vertex_index v1(point[1]);
         Mesh::Vertex_index v2(point[2]);
         //cout<<v0<<" "<<v1<<" "<<v2<<endl;
-        p0=dataset.mesh.point(v0);
-        p1=dataset.mesh.point(v1);
-        p2=dataset.mesh.point(v2);
-        ab=Point(p0.x()-p1.x(),p0.y()-p1.y(),p0.z()-p1.z());
-        bc=Point(p1.x()-p2.x(),p1.y()-p2.y(),p1.z()-p2.z());
-        nor=Point(ab.y()*bc.z()-bc.y()*ab.z(),bc.x()*ab.z()-ab.x()*bc.z(),ab.x()*bc.y()-bc.x()*ab.y());
-        if((normal.x()*nor.x()+normal.y()*nor.y()+normal.z()*nor.z())<0)
-            dataset.mesh.add_face(v0,v1,v2);
-        else
-            dataset.mesh.add_face(v0,v2,v1);
-        indices.push_back(point[0]);
-        indices.push_back(point[1]);
-        indices.push_back(point[2]);
+        dataset.mesh.add_face(v0,v1,v2);
+//        p0=dataset.mesh.point(v0);
+//        p1=dataset.mesh.point(v1);
+//        p2=dataset.mesh.point(v2);
+//        ab=Point(p0.x()-p1.x(),p0.y()-p1.y(),p0.z()-p1.z());
+//        bc=Point(p1.x()-p2.x(),p1.y()-p2.y(),p1.z()-p2.z());
+//        nor=Point(ab.y()*bc.z()-bc.y()*ab.z(),bc.x()*ab.z()-ab.x()*bc.z(),ab.x()*bc.y()-bc.x()*ab.y());
+//        if((normal.x()*nor.x()+normal.y()*nor.y()+normal.z()*nor.z())<0)
+//            dataset.mesh.add_face(v0,v1,v2);
+//        else
+//            dataset.mesh.add_face(v0,v2,v1);
+//        indices.push_back(point[0]);
+//        indices.push_back(point[1]);
+//        indices.push_back(point[2]);
         getline(ss, useless);//空行
         getline(ss, useless);//end loop
         getline(ss, useless);//end facet

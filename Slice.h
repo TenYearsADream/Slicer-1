@@ -1,31 +1,32 @@
 ﻿#ifndef SLICE_H
 #define SLICE_H
-#include <QString>
 #include <QTime>
 #include <boost/any.hpp>
 #include "dataset.h"
 #include "opencl.h"
+#include <QObject>
 using namespace std;
-class Slice
+class Slice: public QObject
 {
+    Q_OBJECT
 public:
-    Slice();
+    explicit Slice(QObject *parent=0);
     ~Slice();
     float thick;
     size_t layernumber;
     bool isAdapt;
-    bool isParaComp;
+    QString sliceType;
     QString slicepath[2];
+    OpenCL opencl;
 public:
     void startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
-
+signals:
+    void outputMsg(QString);
 private:
     QTime time;
     float zheight;
     vector<float>z;
-
     int findtime,comptime,sorttime;
-    OpenCL opencl;
 
 private:
     void sliceByHeight(Mesh mesh,float zmin,float zmax,vector<Polylines> &intrpoints);

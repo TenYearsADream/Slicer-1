@@ -9,32 +9,30 @@
 #include <map>
 using namespace std;
 
-MeshFix::MeshFix(Mesh *_mesh)
+MeshFix::MeshFix(QObject *parent):QObject(parent)
 {
-    mesh=_mesh;
-    repair();
 }
 MeshFix::~MeshFix()
 {
 
 }
 
-void MeshFix::repair()
+void MeshFix::repair(Mesh &mesh)
 {
     //去除小的连通域
-    fixConnectivity();
+    fixConnectivity(&mesh);
     //去除自相交面片
-    selfIntersect();
+    selfIntersect(&mesh);
     //填补洞
-    holeFill();
+    holeFill(&mesh);
     //修复法向
-    if(CGAL::is_closed(*mesh))
+    if(CGAL::is_closed(mesh))
     {
-        //normalRepair();
+        normalRepair(&mesh);
     }
 }
 
-void MeshFix::fixConnectivity()
+void MeshFix::fixConnectivity(Mesh *mesh)
 {
     Mesh::Property_map<Mesh::face_index,size_t> fccmap =mesh->add_property_map<Mesh::face_index,size_t>("f:CC").first;
     size_t num =CGAL::Polygon_mesh_processing::connected_components(*mesh,fccmap);    
@@ -51,9 +49,15 @@ void MeshFix::fixConnectivity()
     cout << "\t Number of vertices  :\t" << mesh->num_vertices()<<endl;
     cout << "\t Number of halfedges :\t" << mesh->num_halfedges() <<endl;
     cout << "\t Number of facets    :\t" << mesh->num_faces()<<endl;
+
+    emit outputMsg("完成连通性修复.");
+    emit outputMsg("\t 去除了"+QString::number(num-1)+"个小的连通域.");
+    emit outputMsg("\t 顶点数:\t"+QString::number(mesh->num_vertices()));
+    emit outputMsg("\t 半边数:\t"+QString::number(mesh->num_halfedges()));
+    emit outputMsg("\t 面片数:\t"+QString::number(mesh->num_faces()));
 }
 
-void MeshFix::holeFill()
+void MeshFix::holeFill(Mesh *mesh)
 {
     int nb_holes = 0;
     for(Mesh::Halfedge_index h:mesh->halfedges())
@@ -69,7 +73,10 @@ void MeshFix::holeFill()
 //        cout << " Number of facets in constructed patch: " << patch_facets.size() <<endl;
 //        cout << " Number of vertices in constructed patch: " << patch_vertices.size() <<endl;
 //        cout << " Fairing : " << (success ? "succeeded" : "failed") <<endl;
-        ++nb_holes;
+        if(success)
+        {
+            ++nb_holes;
+        }
       }
     }
     cout << "filling holes done : " <<endl;
@@ -77,33 +84,49 @@ void MeshFix::holeFill()
     cout << "\t Number of vertices  :\t" << mesh->num_vertices()<<endl;
     cout << "\t Number of halfedges :\t" << mesh->num_halfedges() <<endl;
     cout << "\t Number of facets    :\t" << mesh->num_faces()<<endl;
+
+    emit outputMsg("完成孔洞修复.");
+    emit outputMsg("\t 修复了"+QString::number(nb_holes)+"个孔洞.");
+    emit outputMsg("\t 顶点数:\t"+QString::number(mesh->num_vertices()));
+    emit outputMsg("\t 半边数:\t"+QString::number(mesh->num_halfedges()));
+    emit outputMsg("\t 面片数:\t"+QString::number(mesh->num_faces()));
 }
 
-void MeshFix::normalRepair()
+void MeshFix::normalRepair(Mesh *mesh)
 {
     bool oriented=CGAL::Polygon_mesh_processing::is_outward_oriented(*mesh);
     if(!oriented)
     {
         CGAL::Polygon_mesh_processing::orient(*mesh);
         cout<<"normal error!"<<endl;
+        emit outputMsg("法向量错误.");
     }
     else
     {
         cout<<"normal right!"<<endl;
+        emit outputMsg("法向量正确.");
     }
 }
 
-void MeshFix::selfIntersect()
+void MeshFix::selfIntersect(Mesh *mesh)
 {
     bool intersecting;
     intersecting =CGAL::Polygon_mesh_processing::does_self_intersect(*mesh,CGAL::Polygon_mesh_processing::parameters::vertex_point_map(get(CGAL::vertex_point,*mesh)));
     cout<< (intersecting ? "There are self-intersections." : "There is no self-intersection.")<<endl;
+    if(intersecting)
+    {
+        emit outputMsg("存在自相交.");
+    }
+    else
+    {
+        emit outputMsg("不存在自相交.");
+    }
     while(intersecting)
     {
         vector<pair<Mesh::Face_index, Mesh::Face_index> > intersected_tris;
         CGAL::Polygon_mesh_processing::self_intersections(*mesh,back_inserter(intersected_tris));
         cout << intersected_tris.size() << " pairs of triangles intersect." << std::endl;
-
+        emit outputMsg(QString::number(intersected_tris.size())+"对三角形自相交.");
         for(uint i=0;i<intersected_tris.size();i++)
         {
             Mesh::Face_index f0=intersected_tris[i].first;
@@ -145,9 +168,22 @@ void MeshFix::selfIntersect()
         intersecting = CGAL::Polygon_mesh_processing::does_self_intersect(*mesh,
                                                 CGAL::Polygon_mesh_processing::parameters::vertex_point_map(get(CGAL::vertex_point, *mesh)));
         cout<< (intersecting ? "There are self-intersections." : "There is no self-intersection.")<<endl;
+        if(intersecting)
+        {
+            emit outputMsg("存在自相交.");
+        }
+        else
+        {
+            emit outputMsg("不存在自相交.");
+        }
     }
     cout << "repairing selfintersection done : " <<endl;
     cout << "\t Number of vertices  :\t" << mesh->number_of_vertices()<<endl;
     cout << "\t Number of halfedges :\t" << mesh->number_of_halfedges() <<endl;
     cout << "\t Number of facets    :\t" << mesh->number_of_faces()<<endl;
+
+    emit outputMsg("完成自相交修复.");
+    emit outputMsg("\t 顶点数:\t"+QString::number(mesh->number_of_vertices()));
+    emit outputMsg("\t 半边数:\t"+QString::number(mesh->number_of_halfedges()));
+    emit outputMsg("\t 面片数:\t"+QString::number(mesh->number_of_faces()));
 }
