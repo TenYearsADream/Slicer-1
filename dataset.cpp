@@ -42,40 +42,40 @@ void dataSet::getIndices()
     surroundBox[5]=*max_element(Z.begin(),Z.end());
 
     Mesh meshforGL(mesh);
-    bool success;
+//    bool success;
 //    cout<<meshforGL.number_of_faces()<<endl;
     // This is a stop predicate (defines when the algorithm terminates).
     // In this example, the simplification stops when the number of undirected edges
     // left in the surface mesh drops below the specified number (50000)
-    QTime time;
-    time.start();
-    CGAL::Surface_mesh_simplification::Count_stop_predicate<Mesh> stop(10000);
-    try
-    {
-        int r=CGAL::Surface_mesh_simplification::edge_collapse
-                (meshforGL,stop
-                 ,CGAL::parameters::vertex_index_map(get(CGAL::vertex_point,meshforGL))
-                                   .halfedge_index_map  (get(CGAL::halfedge_index  ,meshforGL))
-                                   .get_cost (CGAL::Surface_mesh_simplification::Edge_length_cost <Mesh>())
-                                   .get_placement(CGAL::Surface_mesh_simplification::Midpoint_placement<Mesh>())
-                );
-        cout << "Finished in "<<time.elapsed()<<"ms. " << r << " edges removed.  "<<meshforGL.number_of_halfedges()/2<< " final edges."<<endl;
-        if(meshforGL.number_of_halfedges()/2>10000)
-        {
-            success=false;
-        }
-        else
-        {
-            success=true;
-        }
+//    QTime time;
+//    time.start();
+//    CGAL::Surface_mesh_simplification::Count_stop_predicate<Mesh> stop(10000);
+//    try
+//    {
+//        int r=CGAL::Surface_mesh_simplification::edge_collapse
+//                (meshforGL,stop
+//                 ,CGAL::parameters::vertex_index_map(get(CGAL::vertex_point,meshforGL))
+//                                   .halfedge_index_map  (get(CGAL::halfedge_index  ,meshforGL))
+//                                   .get_cost (CGAL::Surface_mesh_simplification::Edge_length_cost <Mesh>())
+//                                   .get_placement(CGAL::Surface_mesh_simplification::Midpoint_placement<Mesh>())
+//                );
+//        cout << "Finished in "<<time.elapsed()<<"ms. " << r << " edges removed.  "<<meshforGL.number_of_halfedges()/2<< " final edges."<<endl;
+//        if(meshforGL.number_of_halfedges()/2>10000)
+//        {
+//            success=false;
+//        }
+//        else
+//        {
+//            success=true;
+//        }
 
-    }
-    catch(exception& e)
-    {
-        cout<<"can't simplify mesh."<<e.what()<<endl;
-        success=false;
-    }
-    if(success)
+//    }
+//    catch(exception& e)
+//    {
+//        cout<<"can't simplify mesh."<<e.what()<<endl;
+//        success=false;
+//    }
+    if(meshforGL.number_of_faces()<200000)
     {
         vertexnormals.clear();
         if(CGAL::is_closed(meshforGL))

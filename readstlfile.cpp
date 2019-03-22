@@ -84,6 +84,8 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
     numberTriangles=0;
     numberVertices=0;
     memcpy(&numberTriangles,buffer,4);//4字节三角面片个数
+    normalList.reserve(numberTriangles);
+    verticesmap.reserve(numberTriangles/2);
     //cout<<numberTriangles<<endl;
     buffer +=4;
     //读取三角形面片
@@ -165,9 +167,10 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
     QString strx(" "),stry(" "),strz(" "),key(" ");
     uint index=0;
     uint *point=new uint[3]();
-    char *buffer=strstr(buf,"facet normal");
+    const char *buffer=strstr(buf,"facet normal");
     int namelength=int(buffer-buf);
-    char name[namelength];
+//    char name[namelength];
+    char *name=new char[namelength];
     strncpy(name,buf,sizeof(name));
     name[namelength]='\0';
     char facet[offset];

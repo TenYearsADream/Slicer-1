@@ -1,19 +1,16 @@
 ﻿#ifndef MYGLWIDGET
 #define MYGLWIDGET
-#include <QGLWidget>
-#include <qopenglwidget.h>
+#include <QOpenGLWidget>
 #include <QOpenGLFunctions>
-#include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
-#include <QOpenGLVertexArrayObject>
 #include <QMatrix4x4>
+#include <QVector2D>
 #include <string>
 #include <fstream>
 #include <sstream>
 #include "dataset.h"
 
 class QTimer;
-using namespace std;
 class QOpenGLShaderProgram;
 class MyGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {

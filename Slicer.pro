@@ -5,7 +5,6 @@
 #-------------------------------------------------
 
 QT       += core gui xml
-
 QT +=opengl
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -37,21 +36,32 @@ RESOURCES += \
     res.qrc
 
 
-INCLUDEPATH += D:/Qt/boost_1_65_0
+INCLUDEPATH += D:/Qt/boost_1_69_0
 INCLUDEPATH += D:/Qt/Eigen3.3.7
 INCLUDEPATH += D:/Qt/OpenCL/sdk/include
 
 LIBS += -L'D:/Qt/OpenCL/sdk/lib/x64' -lOpenCL
 
-
 INCLUDEPATH += D:/Qt/CGAL-4.13/include
 INCLUDEPATH += D:/Qt/CGAL-4.13/auxiliary/gmp/include
-INCLUDEPATH += D:/Qt/CGAL/include
+LIBS += -LD:/Qt/CGAL-4.13/auxiliary/gmp/lib/ -llibgmp-10
 
+INCLUDEPATH += D:/Qt/CGAL/include
 LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL
 LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_ImageIO
 LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Core
 LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Qt5
-LIBS += -LD:/Qt/CGAL-4.13/auxiliary/gmp/lib/ -llibgmp-10
 
 QMAKE_CXXFLAGS_RELEASE += -O3
+
+#INCLUDEPATH += $$PWD/../../Qt/CGAL_VS/include
+#DEPENDPATH += $$PWD/../../Qt/CGAL_VS/include
+
+#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL_Core-vc140-mt-4.13
+#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL_Core-vc140-mt-gd-4.13
+
+#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL-vc140-mt-4.13
+#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL-vc140-mt-gd-4.13
+
+#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL_Qt5-vc140-mt-4.13
+#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL_Qt5-vc140-mt-gd-4.13

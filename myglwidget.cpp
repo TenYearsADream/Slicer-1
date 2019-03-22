@@ -1,14 +1,14 @@
 ﻿#include "myglwidget.h"
-#include <QApplication>
 #include <QTimer>
 #include <QDebug>
 #include <iostream>
 #include <string.h>
-#include <QKeyEvent>
+
 #include <QPushButton>
 #include <QOpenGLShader>
 #include <QOpenGLShaderProgram>
-using namespace std;
+#include <QMouseEvent>
+#include <QWheelEvent>
 static float colorMap[][3]={
     {0.7f,0.7f,0.7f},
     {1.0,0.0,0.0},
@@ -26,13 +26,15 @@ MyGLWidget::MyGLWidget(QWidget *parent) :QOpenGLWidget(parent)
   ,xtrans(0.0),ytrans(0.0),ztrans(0.0)
 {
     layer=0;
-    timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(update())); //不停刷新窗口
-    timer->start(2);
+//    timer = new QTimer(this);
+//    connect(timer, SIGNAL(timeout()), this, SLOT(update())); //不停刷新窗口
+//    timer->start(3);
 }
 
 MyGLWidget::~MyGLWidget(){
     delete program;
+    delete sliceProgram;
+    delete timer;
 }
 
 void MyGLWidget::initializeGL()
@@ -45,6 +47,8 @@ void MyGLWidget::initializeGL()
     glHint(GL_LINE_SMOOTH_HINT, GL_DONT_CARE);
     glLineWidth(2.0f);
 
+    const GLubyte* OpenGLVersion =glGetString(GL_VERSION); //返回当前OpenGL实现的版本号
+    cout<<"OpenGL Version: "<<OpenGLVersion<<endl;
     // vertex shader
     QOpenGLShader *vshader = new QOpenGLShader(QOpenGLShader::Vertex, this);
     vshader->compileSourceFile("D:/QTAPP/Slicer/vert.txt");
@@ -70,7 +74,7 @@ void MyGLWidget::initializeGL()
     program->link();
     program->bind();
 
-
+    // set color used to clear background
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glEnable(GL_DEPTH_TEST);					//开启深度缓存
     //glDepthFunc(GL_LEQUAL);//设置深度测试类型
@@ -291,4 +295,5 @@ void MyGLWidget::mousePressEvent(QMouseEvent *event)
 void MyGLWidget::setLayer(int l)
 {
     layer=l-1;
+    this->update();
 }

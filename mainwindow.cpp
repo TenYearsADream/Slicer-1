@@ -205,8 +205,8 @@ void MainWindow::initMenuWidget()
 void MainWindow::closeEvent(QCloseEvent *event) //系统自带退出确定程序
 {
     int choose;
-    choose= QMessageBox::question(this, tr("退出程序"),
-                                   QString(tr("确认退出程序?")),
+    choose= QMessageBox::question(this, tr("EXIT"),
+                                   QString(tr("YES?")),
                                    QMessageBox::Yes | QMessageBox::No);
 
     if (choose== QMessageBox::No)
@@ -245,14 +245,14 @@ void MainWindow::openFile()
             return;
         }
         emit outputMsg(path);
-        emit outputMsg("模型大小："+QString::number(readstl.modelsize)+"M");
-        emit outputMsg("文件类型："+readstl.filetype);
+        emit outputMsg("Model Size: "+QString::number(readstl.modelsize)+"M");
+        emit outputMsg("File Type: "+readstl.filetype);
         int readtime=time.elapsed()/1000;
-        emit outputMsg("读取STL模型时间:"+QString::number(readtime)+"s");
-        emit outputMsg("顶点数:"+QString::number(dataset.mesh.number_of_vertices()));
-        emit outputMsg("边个数:"+QString::number(dataset.mesh.number_of_edges()));
-        emit outputMsg("面片数:"+QString::number(dataset.mesh.number_of_faces()));
-        emit outputMsg("法向量数:"+QString::number(readstl.normalList.size()));
+        emit outputMsg("time of readstl: "+QString::number(readtime)+"s");
+        emit outputMsg("number of vertices: "+QString::number(dataset.mesh.number_of_vertices()));
+        emit outputMsg("number of edges: "+QString::number(dataset.mesh.number_of_edges()));
+        emit outputMsg("number of faces: "+QString::number(dataset.mesh.number_of_faces()));
+        emit outputMsg("number of normals: "+QString::number(readstl.normalList.size()));
         qDebug()<<"time of readstl:"<<readtime<<"s";
         qDebug()<<"number of vertices:"<<dataset.mesh.number_of_vertices();
         qDebug()<<"number of edges:"<<dataset.mesh.number_of_edges();
@@ -261,11 +261,10 @@ void MainWindow::openFile()
         vector<Point>().swap(readstl.normalList);
         dataset.halfedgeOnGpu();
         dataset.getIndices();
-        dataset.mesh.clear();
         float x=dataset.surroundBox[1]-dataset.surroundBox[0];
         float y=dataset.surroundBox[3]-dataset.surroundBox[2];
         float z=dataset.surroundBox[5]-dataset.surroundBox[4];
-        emit outputMsg("模型包围盒:"+QString("%1").arg(x)+"*"+QString("%1").arg(y)+"*"+QString("%1").arg(z)+"mm");
+        emit outputMsg("surroundBox of the model: "+QString("%1").arg(x)+"*"+QString("%1").arg(y)+"*"+QString("%1").arg(z)+"mm");
         qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
         statusLabel->setText(tr("open file success"));
         opengl->xtrans=-(dataset.surroundBox[1]+dataset.surroundBox[0])/2.0f;
@@ -281,6 +280,7 @@ void MainWindow::openFile()
 //        opengl->indices=readstl.indices;
         if(dataset.vertices.empty())
         {
+            dataset.mesh.clear();
             cout<<"can't simplify mesh."<<endl;
             emit outputMsg("模型不能简化，不显示模型");
         }
@@ -325,15 +325,16 @@ void MainWindow::modelSlice()
     if(!dataset.halfedgeset.empty())
     {
         cout<<"start slice"<<endl;        
-		emit outputMsg("开始分层……");
+        emit outputMsg("start slice......");
         slice.startSlice(dataset.vertexset,dataset.halfedgeset,dataset.surroundBox,opengl->intrpoints);
-		emit outputMsg("分层数："+QString::number(slice.layernumber));
+        emit outputMsg("number of layers: "+QString::number(slice.layernumber));
         if(slice.isAdapt)
             cout<<"number of layers with adapt:"<<slice.layernumber<<endl;
         else
             cout<<"number of layers without adapt:"<<slice.layernumber<<endl;
         layerSlider->setRange(1,int(slice.layernumber));
         layerSpinBox->setRange(1,int(slice.layernumber));
+        opengl->update();
         statusLabel->setText(tr("slice finished."));
     } else {
         QMessageBox::warning(this, tr("error"),
@@ -374,18 +375,18 @@ void MainWindow::modelRepair()
     meshfix.repair(dataset.mesh);
     dataset.halfedgeOnGpu();
     dataset.getIndices();
-    emit outputMsg("修复模型时间:"+QString::number(time.elapsed()/1000.0)+"s");
+    emit outputMsg("time of repairing the model: "+QString::number(time.elapsed()/1000.0)+"s");
     qDebug()<<"time of repairing the model:"<<time.elapsed()/1000.0<<"s";
     qDebug()<<"number of vertices after repairing:"<<dataset.mesh.number_of_vertices();
     qDebug()<<"number of edges after repairing:"<<dataset.mesh.number_of_edges();
     qDebug()<<"number of faces after repairing:"<<dataset.mesh.number_of_faces();
-    emit outputMsg("顶点数:"+QString::number(dataset.mesh.number_of_vertices()));
-    emit outputMsg("边个数:"+QString::number(dataset.mesh.number_of_edges()));
-    emit outputMsg("面片数:"+QString::number(dataset.mesh.number_of_faces()));
+    emit outputMsg("number of vertices after repairing:"+QString::number(dataset.mesh.number_of_vertices()));
+    emit outputMsg("number of edges after repairing:"+QString::number(dataset.mesh.number_of_edges()));
+    emit outputMsg("number of faces after repairing:"+QString::number(dataset.mesh.number_of_faces()));
     float x=dataset.surroundBox[1]-dataset.surroundBox[0];
     float y=dataset.surroundBox[3]-dataset.surroundBox[2];
     float z=dataset.surroundBox[5]-dataset.surroundBox[4];
-    emit outputMsg("模型包围盒:"+QString("%1").arg(x)+"*"+QString("%1").arg(y)+"*"+QString("%1").arg(z)+"mm");
+    emit outputMsg("surroundBox of the model:"+QString("%1").arg(x)+"*"+QString("%1").arg(y)+"*"+QString("%1").arg(z)+"mm");
     qDebug()<<"surroundBox of the model:"<<x<<"*"<<y<<"*"<<z;
     statusLabel->setText(tr("repair finished."));
     opengl->vertices.clear();

@@ -217,6 +217,7 @@ void OpenCL::executeKernel(vector<unsigned int> edges,vector<unsigned int>linesn
         cout<<"can't executeKernel hashfind."<<err<<endl;
     }
     queue.finish();
+
     err= queue.enqueueReadBuffer(locationbuf, CL_TRUE, 0,location.size()*sizeof(unsigned int),&location[0]);
 
     err |=queue.enqueueReadBuffer(hashTablebuf, CL_TRUE, 0,hashTable.size()*sizeof(cl_int4),&hashTable[0]);

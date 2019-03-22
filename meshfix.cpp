@@ -50,11 +50,11 @@ void MeshFix::fixConnectivity(Mesh *mesh)
     cout << "\t Number of halfedges :\t" << mesh->num_halfedges() <<endl;
     cout << "\t Number of facets    :\t" << mesh->num_faces()<<endl;
 
-    emit outputMsg("完成连通性修复.");
-    emit outputMsg("\t 去除了"+QString::number(num-1)+"个小的连通域.");
-    emit outputMsg("\t 顶点数:\t"+QString::number(mesh->num_vertices()));
-    emit outputMsg("\t 半边数:\t"+QString::number(mesh->num_halfedges()));
-    emit outputMsg("\t 面片数:\t"+QString::number(mesh->num_faces()));
+    emit outputMsg("fixing connectivity done :");
+    emit outputMsg("\t remove"+QString::number(num-1)+"small connectivities.");
+    emit outputMsg("\t Number of vertices  :\t"+QString::number(mesh->num_vertices()));
+    emit outputMsg("\t Number of halfedges :\t"+QString::number(mesh->num_halfedges()));
+    emit outputMsg("\t Number of facets    :\t" +QString::number(mesh->num_faces()));
 }
 
 void MeshFix::holeFill(Mesh *mesh)
@@ -85,11 +85,11 @@ void MeshFix::holeFill(Mesh *mesh)
     cout << "\t Number of halfedges :\t" << mesh->num_halfedges() <<endl;
     cout << "\t Number of facets    :\t" << mesh->num_faces()<<endl;
 
-    emit outputMsg("完成孔洞修复.");
-    emit outputMsg("\t 修复了"+QString::number(nb_holes)+"个孔洞.");
-    emit outputMsg("\t 顶点数:\t"+QString::number(mesh->num_vertices()));
-    emit outputMsg("\t 半边数:\t"+QString::number(mesh->num_halfedges()));
-    emit outputMsg("\t 面片数:\t"+QString::number(mesh->num_faces()));
+    emit outputMsg("filling holes done : ");
+    emit outputMsg("repair "+QString::number(nb_holes)+" holes.");
+    emit outputMsg( "\t Number of vertices  :\t" +QString::number(mesh->num_vertices()));
+    emit outputMsg("\t Number of halfedges :\t"+QString::number(mesh->num_halfedges()));
+    emit outputMsg("\t Number of facets    :\t"+QString::number(mesh->num_faces()));
 }
 
 void MeshFix::normalRepair(Mesh *mesh)
@@ -99,12 +99,12 @@ void MeshFix::normalRepair(Mesh *mesh)
     {
         CGAL::Polygon_mesh_processing::orient(*mesh);
         cout<<"normal error!"<<endl;
-        emit outputMsg("法向量错误.");
+        emit outputMsg("normal error!");
     }
     else
     {
         cout<<"normal right!"<<endl;
-        emit outputMsg("法向量正确.");
+        emit outputMsg("normal right!");
     }
 }
 
@@ -115,11 +115,11 @@ void MeshFix::selfIntersect(Mesh *mesh)
     cout<< (intersecting ? "There are self-intersections." : "There is no self-intersection.")<<endl;
     if(intersecting)
     {
-        emit outputMsg("存在自相交.");
+        emit outputMsg("There are self-intersections.");
     }
     else
     {
-        emit outputMsg("不存在自相交.");
+        emit outputMsg("There is no self-intersection.");
     }
     while(intersecting)
     {
@@ -174,7 +174,7 @@ void MeshFix::selfIntersect(Mesh *mesh)
         }
         else
         {
-            emit outputMsg("不存在自相交.");
+            emit outputMsg("There is no self-intersection.");
         }
     }
     cout << "repairing selfintersection done : " <<endl;
@@ -182,8 +182,8 @@ void MeshFix::selfIntersect(Mesh *mesh)
     cout << "\t Number of halfedges :\t" << mesh->number_of_halfedges() <<endl;
     cout << "\t Number of facets    :\t" << mesh->number_of_faces()<<endl;
 
-    emit outputMsg("完成自相交修复.");
-    emit outputMsg("\t 顶点数:\t"+QString::number(mesh->number_of_vertices()));
-    emit outputMsg("\t 半边数:\t"+QString::number(mesh->number_of_halfedges()));
-    emit outputMsg("\t 面片数:\t"+QString::number(mesh->number_of_faces()));
+    emit outputMsg("repairing selfintersection done : ");
+    emit outputMsg("\t Number of vertices  :"+QString::number(mesh->number_of_vertices()));
+    emit outputMsg("\t Number of halfedges :\t"+QString::number(mesh->number_of_halfedges()));
+    emit outputMsg("\t Number of facets    :\t"+QString::number(mesh->number_of_faces()));
 }
