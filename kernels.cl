@@ -90,7 +90,7 @@ void hashInsert(__global int4 *hashTable,int key,int value,uint length,uint hash
 		tmphash=hashTable[hashoffset+hashAddr];
 /* 		printf("key :%d tmphash.x: %d\n",key,tmphash.x);
 		printf("bool : %d\n",tmphash.x!=key); */
-		if(tmphash.x!=-2 && tmphash.x!=key/length && tmphash.w!=key%length)  
+		if(tmphash.x!=-2 && (tmphash.x!=key/length &&  tmphash.w!=key%length))  
 		{				
 			hashAddr =(hashAddr+1)% length; 
 		}
@@ -109,7 +109,7 @@ void hashInsert(__global int4 *hashTable,int key,int value,uint length,uint hash
 		hashTable[hashoffset+hashAddr].y = value;
 		hashTable[hashoffset+hashAddr].w = key%length;
 	}
-	else if(tmphash.x==key/length && tmphash.w==key%length)
+	else
 	{
 		hashTable[hashoffset+hashAddr].z = value;
 	}	
@@ -118,7 +118,7 @@ void hashInsert(__global int4 *hashTable,int key,int value,uint length,uint hash
 int hashSearch(__global int4 *hashTable,int key,uint length,uint hashoffset)
 {
 	uint hashAddr =key % length;
-	while(hashTable[hashoffset+hashAddr].x!=key/length && hashTable[hashoffset+hashAddr].x!=key%length)
+	while(hashTable[hashoffset+hashAddr].x!=key/length && hashTable[hashoffset+hashAddr].w!=key%length)
     {
         hashAddr =(hashAddr+1) % length;
 		/* printf("key:%d,hashTable[hashoffset+hashAddr].x:%d, hashAddr:%d\n",key,hashTable[hashoffset+hashAddr].x,hashAddr); */
@@ -138,8 +138,8 @@ __kernel void hashfind(const __global uint *edgebuf,const __global uint *linesnu
 	uint loopcounttmp=0,loopnumbertmp=0;
 	uint length=0,hashoffset=0;
 	int key=0,key1=0;
-	uint loops=10000;
-	/* if(i==1) */
+	uint loops=100000;
+	/* if(i==0) */
 	{
 		if(i==0)
 		{
@@ -253,8 +253,8 @@ __kernel void hashfind(const __global uint *edgebuf,const __global uint *linesnu
 						break;
 					} 
 				}
-				/* printf("----loop %d : %d\n",loopcounttmp,loopnumbertmp); */
-				/* if(loopnumbertmp>1) */
+
+				if(loopnumbertmp>2)
 				{
 					loopcounttmp++;	
 					loopnumber[i*loops+loopcounttmp-1]=loopnumbertmp;

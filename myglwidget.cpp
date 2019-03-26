@@ -26,7 +26,7 @@ MyGLWidget::MyGLWidget(QWidget *parent) :QOpenGLWidget(parent)
   ,xtrans(0.0),ytrans(0.0),ztrans(0.0)
 {
     layer=0;
-//    timer = new QTimer(this);
+    timer = new QTimer(this);
 //    connect(timer, SIGNAL(timeout()), this, SLOT(update())); //不停刷新窗口
 //    timer->start(3);
 }

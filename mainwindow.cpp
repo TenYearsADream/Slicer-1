@@ -14,7 +14,8 @@
 #include "windows.h"
 #include "mainwindow.h"
 #include "Slice.h"
-
+#include "readobjfile.h"
+#include "readofffile.h"
 using namespace std;
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
@@ -63,8 +64,9 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
 
 MainWindow::~MainWindow()
 {
-    delete(openAction);
+    delete(openStl);
     delete(opengl);
+    delete(readobj);
 }
 
 void MainWindow::initStatusBar()
@@ -190,11 +192,13 @@ void MainWindow::initSliceWidget()
 void MainWindow::initMenuWidget()
 {
     QMenu *file = menuBar()->addMenu(tr("&File"));
-    openAction = new QAction(QIcon(":/images/resource/open-file.png"), tr("&Open..."), this);
-    openAction->setShortcuts(QKeySequence::Open);
-    openAction->setStatusTip(tr("Open an existing file"));
-    connect(openAction,&QAction::triggered,this,&MainWindow::openFile);
-    file->addAction(openAction);
+
+    openStl = new QAction(QIcon(":/images/resource/open-file.png"), tr("&Open..."), this);
+    openStl->setShortcuts(QKeySequence::Open);
+    openStl->setStatusTip(tr("Open an existing file"));
+    connect(openStl,&QAction::triggered,this,&MainWindow::OpenStlFile);
+    file->addAction(openStl);
+
     saveStl = new QAction(QIcon(":/images/resource/save-file.png"), tr("&Save..."), this);
     saveStl->setShortcuts(QKeySequence::Save);
     saveStl->setStatusTip(tr("Save the model"));
@@ -220,16 +224,16 @@ void MainWindow::closeEvent(QCloseEvent *event) //系统自带退出确定程序
 }
 
 
-void MainWindow::openFile()
+void MainWindow::OpenStlFile()
 {
     statusLabel->setText(tr("opening..."));
     QFileInfo fileinfo;
     QString path = QFileDialog::getOpenFileName(this,
                                                 tr("Open File"),
                                                 ".",
-                                               tr("Text Files(*.stl)"));    
-    if(!path.isEmpty()) {
+                                               tr("Text Files(*.stl *.obj *off)"));
 
+    if(!path.isEmpty()) {
         QTime time;
         time.start();
         dataset.mesh.clear();
@@ -238,27 +242,57 @@ void MainWindow::openFile()
         slicepath.truncate(index);
         slice.slicepath[0]=slicepath+"_cpu.slc";
         slice.slicepath[1]=slicepath+"_gpu.slc";
-        if(!readstl.ReadStlFile(path,dataset))
+
+        fileinfo=QFileInfo(path);
+        QString filesuffix=fileinfo.suffix();
+        if(filesuffix=="stl" || filesuffix=="STL")
         {
-            cout<<"Failed to read STL file!"<<endl;
-            statusLabel->setText(tr("Failed to read STL file!"));
-            return;
+            if(!readstl.ReadStlFile(path,dataset))
+            {
+                cout<<"Failed to read STL file!"<<endl;
+                statusLabel->setText(tr("Failed to read STL file!"));
+                return;
+            }
+            emit outputMsg("Model Size: "+QString::number(readstl.modelsize)+"M");
+            emit outputMsg("File Type: "+readstl.filetype);
+            emit outputMsg("number of normals: "+QString::number(readstl.normalList.size()));
+            qDebug()<<"number of normals:"<<readstl.normalList.size();
+            vector<Point>().swap(readstl.normalList);
+        }
+        else if(filesuffix=="obj" || filesuffix=="OBJ")
+        {
+            readobj=new ReadOBJFile(dataset);
+            if(!readobj->ReadObjFile(path))
+            {
+                cout<<"Failed to read OBJ file!"<<endl;
+                statusLabel->setText(tr("Failed to read OBJ file!"));
+                return;
+            }
+            emit outputMsg("Model Size: "+QString::number(readobj->modelsize)+"M");
+            emit outputMsg("File Type: OBJ");
+        }
+        else if(filesuffix=="off" || filesuffix=="OFF")
+        {
+            ReadOFFFile readoff(dataset);
+            if(!readoff.ReadOffFile(path))
+            {
+                cout<<"Failed to read OFF file!"<<endl;
+                statusLabel->setText(tr("Failed to read OFF file!"));
+                return;
+            }
+            emit outputMsg("Model Size: "+QString::number(readoff.modelsize)+"M");
+            emit outputMsg("File Type: OFF");
         }
         emit outputMsg(path);
-        emit outputMsg("Model Size: "+QString::number(readstl.modelsize)+"M");
-        emit outputMsg("File Type: "+readstl.filetype);
         int readtime=time.elapsed()/1000;
         emit outputMsg("time of readstl: "+QString::number(readtime)+"s");
         emit outputMsg("number of vertices: "+QString::number(dataset.mesh.number_of_vertices()));
         emit outputMsg("number of edges: "+QString::number(dataset.mesh.number_of_edges()));
         emit outputMsg("number of faces: "+QString::number(dataset.mesh.number_of_faces()));
-        emit outputMsg("number of normals: "+QString::number(readstl.normalList.size()));
         qDebug()<<"time of readstl:"<<readtime<<"s";
         qDebug()<<"number of vertices:"<<dataset.mesh.number_of_vertices();
         qDebug()<<"number of edges:"<<dataset.mesh.number_of_edges();
         qDebug()<<"number of faces:"<<dataset.mesh.number_of_faces();
-        qDebug()<<"number of normals:"<<readstl.normalList.size();
-        vector<Point>().swap(readstl.normalList);
         dataset.halfedgeOnGpu();
         dataset.getIndices();
         float x=dataset.surroundBox[1]-dataset.surroundBox[0];
@@ -300,6 +334,7 @@ void MainWindow::openFile()
                              tr("You did not select any file."));
     }
 }
+
 
 void MainWindow::saveFile()
 {

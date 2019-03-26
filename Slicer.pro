@@ -22,7 +22,9 @@ SOURCES += main.cpp\
     opencl.cpp \
     meshfix.cpp \
     myglwidget.cpp \
-    Slice.cpp
+    Slice.cpp \
+    readobjfile.cpp \
+    readofffile.cpp
 
 HEADERS  += mainwindow.h \
     readstlfile.h \
@@ -30,7 +32,9 @@ HEADERS  += mainwindow.h \
     opencl.h \
     meshfix.h \
     myglwidget.h \
-    Slice.h
+    Slice.h \
+    readobjfile.h \
+    readofffile.h
 
 RESOURCES += \
     res.qrc

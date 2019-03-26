@@ -39,5 +39,7 @@ private:
 
     void hashInsert(vector<cl_int3>& hashTable,uint key,uint value,uint length);
     int hashSearch(vector<cl_int3>hashTable,uint key,uint length);
+
+    void writeHash(vector<cl_int4>hashTable);
 };
 #endif // SLICE_H

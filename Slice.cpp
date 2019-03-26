@@ -1,6 +1,7 @@
 ﻿#include "Slice.h"
 #include <QTextStream>
 #include <QDebug>
+#include <QFile>
 using namespace std;
 Slice::Slice(QObject *parent):QObject(parent)
 {
@@ -140,8 +141,17 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             face.reserve(edges[i].size());
             for(uint j=0;j<edges[i].size();j++)
             {
+                //cout<<halfedge[edges[i][j]].z<<" ";
                 facesmap.insert(halfedge[edges[i][j]].z,j);
             }
+            //cout<<endl;
+//            qDebug()<<facesmap.count();
+//            QHash<uint,uint>::const_iterator it;
+//            for(it=facesmap.begin();it!=facesmap.end();it++)
+//            {
+//                qDebug()<<it.key()<<it.value()<<(++it).value();
+
+//            }
             while(!facesmap.empty())
             {
                 face.clear();
@@ -347,8 +357,16 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     vector<uint>linesnumber;
     linesnumber.reserve(layernumber);
     faceset.reserve(total);
-    const uint LOOPs=10000;
+    const uint LOOPs=100000;
     const uint MAXFACESETSIZE=uint(opencl.deviceinfo.maxMemAllocSize)*1024*1024/(4*sizeof(uint));
+    QFile f("C:/Users/xjtu_/Desktop/cpu.txt");
+    if(!f.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        cout << "Open failed." << endl;
+    }
+
+    QTextStream txtOutput(&f);
+
     while(endlayer<layernumber-1)
     {
         time2.start();
@@ -372,15 +390,22 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             {
                 linesnumber.push_back(uint(edges[i].size()));
             }
+//            if(i<2)
+            {
             //cout<<edges[i].size()<<endl;
+            txtOutput<<edges[i].size()<<endl;
             for(uint j=0;j<edges[i].size();j++)
             {
+                txtOutput<<halfedge[edges[i][j]].z<<" ";
                 //cout<<halfedge[edges[i][j]].z<<" ";
                 faceset.push_back(halfedge[edges[i][j]].z);
             }
+            txtOutput<<endl;
             //cout<<endl;
+            }
             endlayer=i;
         }
+        f.close();
         layerwidth=uint(linesnumber.size());
         createtime+=time2.elapsed();
         vector<uint>locationdata(uint(faceset.size()*1.1));
@@ -394,17 +419,19 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
         cout <<"loopcount : "<< loopcount.size() << " memory: " << sizeof(uint)*loopcount.size() / 1048576 << "M" << endl;
         cout <<"loopnumber : "<< loopnumber.size() << " memory: " << sizeof(uint)*loopnumber.size() / 1048576 << "M" << endl;
         opencl.executeKernel(faceset,linesnumber,hashTable,layerwidth,locationdata,loopcount,loopnumber);
+        //writeHash(hashTable);
         sorttime +=time.elapsed();
         time.restart();
         uint hashoffset=0,edgeoffset=0;
-//        for(uint i=0;i<2;i++)
+//        for(uint i=0;i<1;i++)
 //        {
 //            if(i==0)hashoffset=0;
-//            else hashoffset=linesnumber[i-1]/2;
-//            cout<<"elements in hashTable of layer "<<i<<": "<<linesnumber[i]/2-hashoffset<<endl;
-//            for(uint j=0;j<2;j++)
+//            else hashoffset=linesnumber[i-1];
+//            cout<<"elements in hashTable of layer "<<i<<": "<<linesnumber[i]-hashoffset<<endl;
+//            for(uint j=0;j<linesnumber[i]-hashoffset;j++)
 //            {
-//                cout<<hashTable[hashoffset+j].x<<": "<<hashTable[hashoffset+j].y<<","<<hashTable[hashoffset+j].z<<endl;
+//                if(hashTable[hashoffset+j].y>0)
+//                    qDebug()<<hashTable[hashoffset+j].x*(linesnumber[i]-hashoffset)+hashTable[hashoffset+j].w<<hashTable[hashoffset+j].y<<hashTable[hashoffset+j].z;
 //            }
 //        }
 //        cout<<"layerwidth: "<<layerwidth<<endl;
@@ -443,10 +470,12 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
 //            cout<<endl;
             if(i==startlayer)edgeoffset=0;
             else edgeoffset=linesnumber[i-startlayer-1];
+            polylines.clear();
             polylines.reserve(loopcount[i-startlayer]);
             uint offset=0;
             for(uint j=0;j<loopcount[i-startlayer];j++)
             {
+                lines.clear();
                 lines.reserve(loopnumber[(i-startlayer)*LOOPs+j]);
                 if(j==0)offset=0;
                 else offset +=loopnumber[(i-startlayer)*LOOPs+j-1];
@@ -472,7 +501,6 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
                 }
             }
             intrpoints[i]=polylines;
-            vector<Lines>().swap(polylines);
         }
         comptime +=time.elapsed();
         startlayer=endlayer;
@@ -691,4 +719,21 @@ int Slice::hashSearch(vector<cl_int3>hashTable,uint key,uint length)
         }
     }
     return int(hashAddr);
+}
+
+void Slice::writeHash(vector<cl_int4>hashTable)
+{
+    QFile f("C:/Users/xjtu_/Desktop/HashTable.txt");
+    if(!f.open(QIODevice::WriteOnly | QIODevice::Text))
+    {
+        cout << "Open failed." << endl;
+    }
+
+    QTextStream txtOutput(&f);
+    for(uint i=0;i<hashTable.size();i++)
+    {
+        txtOutput <<hashTable[i].x<<" "<<hashTable[i].y<<" "<<hashTable[i].z<<" "<<hashTable[i].w << endl;
+    }
+    f.close();
+
 }

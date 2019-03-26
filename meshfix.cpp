@@ -19,6 +19,8 @@ MeshFix::~MeshFix()
 
 void MeshFix::repair(Mesh &mesh)
 {
+    //缝合边界
+    stitchBorders(&mesh);
     //去除小的连通域
     fixConnectivity(&mesh);
     //去除自相交面片
@@ -186,4 +188,17 @@ void MeshFix::selfIntersect(Mesh *mesh)
     emit outputMsg("\t Number of vertices  :"+QString::number(mesh->number_of_vertices()));
     emit outputMsg("\t Number of halfedges :\t"+QString::number(mesh->number_of_halfedges()));
     emit outputMsg("\t Number of facets    :\t"+QString::number(mesh->number_of_faces()));
+}
+
+void MeshFix::stitchBorders(Mesh *mesh)
+{
+    std::cout << "Before stitching : " << std::endl;
+    std::cout << "\t Number of vertices  :\t" << mesh->number_of_vertices()<< std::endl;
+    std::cout << "\t Number of halfedges :\t" << mesh->number_of_halfedges()<< std::endl;
+    std::cout << "\t Number of facets    :\t" << mesh->number_of_faces() << std::endl;
+    CGAL::Polygon_mesh_processing::stitch_borders(*mesh);
+    std::cout << "Stitching done : " << std::endl;
+    std::cout << "\t Number of vertices  :\t" << mesh->number_of_vertices()<< std::endl;
+    std::cout << "\t Number of halfedges :\t" << mesh->number_of_halfedges()<< std::endl;
+    std::cout << "\t Number of facets    :\t" << mesh->number_of_faces() << std::endl;
 }

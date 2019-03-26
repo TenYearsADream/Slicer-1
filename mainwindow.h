@@ -16,6 +16,7 @@
 #include "Slice.h"
 #include "meshfix.h"
 using namespace std;
+class ReadOBJFile;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -32,13 +33,14 @@ private slots:
 //    void modelSegment();
     void modelSlice();
     void modelPlace();
-    void openFile();
+    void OpenStlFile();
     void modelRepair();
     void saveFile();
     void timeUpdate();
 private:
-    QAction *openAction,*saveStl;
+    QAction *openStl,*saveStl;
     ReadSTLFile readstl;
+    ReadOBJFile *readobj;
     MyGLWidget *opengl;
     QWidget *toolWidget;
     QVBoxLayout *toollayout;
