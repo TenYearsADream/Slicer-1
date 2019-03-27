@@ -4,8 +4,9 @@
 #include <QFile>
 #include <dataset.h>
 using namespace std;
-class ReadSTLFile
+class ReadSTLFile:public QObject
 {
+    Q_OBJECT
 public:
     uint numberTriangles;
     uint numberVertices;
@@ -15,13 +16,20 @@ public:
     int modelsize;
     QString filetype;
 public:
-    bool ReadStlFile(const QString filename,dataSet &dataset);
+    explicit ReadSTLFile(dataSet &_dataset);
+    bool ReadStlFile(const QString filename);
 private:
     QHash<QString,uint> verticesmap;
     QFile file;
-
+    dataSet *dataset;
+    bool isstop;
 private:
-    void ReadASCII(const char *buf,dataSet &dataset);
-    void ReadBinary(char *buf,dataSet &dataset);
-    uint addPoint(QString key,Point point,dataSet &dataset);
+    bool ReadASCII(const char *buf);
+    bool ReadBinary(char *buf);
+    uint addPoint(QString key,Point point);
+signals:
+    void progressReport(float fraction,float total);
+public slots:
+    void ExitRead();
+
 };

@@ -7,14 +7,26 @@
 #include <QProgressDialog>
 #include <QMessageBox>
 #include"readstlfile.h"
-
+#include "loadprogressbar.h"
+#include <QApplication>
 using namespace std;
-bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
+ReadSTLFile::ReadSTLFile(dataSet &_dataset)
 {
+    dataset=&_dataset;
+    isstop=false;
+    numberTriangles=0;
+    numberVertices=0;
+    verticesmap.clear();
+}
+bool ReadSTLFile::ReadStlFile(const QString filename)
+{
+    loadProgressBar progressbar("read stl...");
+    connect(this,SIGNAL(progressReport(float,float)),&progressbar,SLOT(setProgressBar(float,float)));
+    connect(&progressbar,SIGNAL(signalExit()),this,SLOT(ExitRead()));
     normalList.clear();//清空vector
     vertices.clear();
     indices.clear();
-    dataset.mesh.clear();
+    dataset->mesh.clear();
     file.setFileName(filename);
     uchar* buffer;
     int headoffset;
@@ -30,16 +42,26 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
             modelsize=int(file.size()/1048576);
             qDebug() <<"内存大小："<< file.size()/1048576<<"M";
             buffer=file.map(0,file.size());
+            QTextStream in(&file);
+            uint total=1;
+            QString line = in.readLine();
+            while (!line.isNull()) {
+                line = in.readLine();
+                total++;
+            }
+            numberTriangles=(total-2)/7;
             if(buffer)
             {
-                ReadASCII((char*)buffer,dataset);
+                if(!ReadASCII((char*)buffer))
+                {
+                    return false;
+                }
             }
             else
             {
                 cout<<"out of memory error"<<endl;
                 return false;
             }
-
         }
         else
         {
@@ -50,7 +72,10 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
             buffer=file.map(0,file.size());
             if(buffer)
             {
-                ReadBinary((char*)buffer,dataset);
+                if(!ReadBinary((char*)buffer))
+                {
+                    return false;
+                }
             }
             else
             {
@@ -70,7 +95,7 @@ bool ReadSTLFile::ReadStlFile(const QString filename,dataSet &dataset)
     }
 }
 
-void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
+bool ReadSTLFile::ReadBinary(char *buffer)
 {
     float x=0,y=0,z=0;
     uint index=0;
@@ -78,6 +103,7 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
     QString strx(" "),stry(" "),strz(" "),key(" ");
     char name[80];
     uint *point=new uint[3]();
+    float fraction=0.0f;
     memcpy(name, buffer, 80);//80字节文件头
     //cout<<name<<endl;
     buffer += 80;
@@ -111,13 +137,13 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
             strz = QString::number(double(z), 10, 15);
             //qDebug()<<strx<<" "<<stry<<" "<<strz;
             key="1"+strx+stry+strz;
-            index=addPoint(key,Point(x,y,z),dataset);
+            index=addPoint(key,Point(x,y,z));
             point[j]=index;
         }
         Mesh::Vertex_index v0(point[0]);
         Mesh::Vertex_index v1(point[1]);
         Mesh::Vertex_index v2(point[2]);
-        dataset.mesh.add_face(v0,v1,v2);
+        dataset->mesh.add_face(v0,v1,v2);
 //        p0=dataset.mesh.point(v0);
 //        p1=dataset.mesh.point(v1);
 //        p2=dataset.mesh.point(v2);
@@ -132,11 +158,18 @@ void ReadSTLFile::ReadBinary(char *buffer,dataSet &dataset)
 //        indices.push_back(ushort(point[1]));
 //        indices.push_back(ushort(point[2]));
         buffer += 2;//跳过尾部标志
+        fraction=float(i+1)/numberTriangles;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
     }
     delete[] point;
+    if(isstop)
+        return false;
+    else
+        return true;
 }
 
-uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
+uint ReadSTLFile::addPoint(QString key,Point point){
     uint index;
     auto it = verticesmap.find(key);
     if(it != verticesmap.end())
@@ -146,7 +179,7 @@ uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
     }
     else
     {
-        dataset.mesh.add_vertex(point);
+        dataset->mesh.add_vertex(point);
 //        vertices.push_back(float(point.x()));
 //        vertices.push_back(float(point.y()));
 //        vertices.push_back(float(point.z()));
@@ -157,19 +190,19 @@ uint ReadSTLFile::addPoint(QString key,Point point,dataSet &dataset){
     return index;
 }
 
-void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
+bool ReadSTLFile::ReadASCII(const char *buf)
 {
     const int offset=280;
     numberVertices=0;
-    numberTriangles = 0;
+    int cur=0;
     double x=0, y=0, z=0;
     Point normal,p0,p1,p2,ab,bc,nor;
     QString strx(" "),stry(" "),strz(" "),key(" ");
     uint index=0;
+    float fraction=0.0f;
     uint *point=new uint[3]();
     const char *buffer=strstr(buf,"facet normal");
     int namelength=int(buffer-buf);
-//    char name[namelength];
     char *name=new char[namelength];
     strncpy(name,buf,sizeof(name));
     name[namelength]='\0';
@@ -177,6 +210,10 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
     string useless;
     do
     {
+        if(isstop)
+        {
+            return false;
+        }
         strncpy(facet,buffer,sizeof(facet));
         facet[offset-1]='\0';
         //cout<<facet<<endl;
@@ -199,14 +236,14 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
             strz = QString::number(z, 10, 15);
             //qDebug()<<strx<<" "<<stry<<" "<<strz;
             key="1"+strx+stry+strz;
-            index=addPoint(key,Point(x,y,z),dataset);
+            index=addPoint(key,Point(x,y,z));
             point[i]=index;
         }       
         Mesh::Vertex_index v0(point[0]);
         Mesh::Vertex_index v1(point[1]);
         Mesh::Vertex_index v2(point[2]);
         //cout<<v0<<" "<<v1<<" "<<v2<<endl;
-        dataset.mesh.add_face(v0,v1,v2);
+        dataset->mesh.add_face(v0,v1,v2);
 //        p0=dataset.mesh.point(v0);
 //        p1=dataset.mesh.point(v1);
 //        p2=dataset.mesh.point(v2);
@@ -226,10 +263,22 @@ void ReadSTLFile::ReadASCII(const char *buf,dataSet &dataset)
 
         buffer=strstr(buffer,"normal");
         buffer=strstr(buffer,"facet normal");
-        numberTriangles++;
+        cur++;
+        fraction=float(cur)/numberTriangles;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
         //cout<<"facenumber:"<<numberTriangles<<" "<<dataset.mesh.num_faces()<<endl;
     }while(buffer!=NULL);
     delete[] point;
+    return true;
 }
 
-
+void ReadSTLFile::ExitRead(){
+    numberTriangles=0;
+    numberVertices=0;
+    modelsize=0;
+    normalList.clear();
+    verticesmap.clear();
+    dataset->mesh.clear();
+    isstop=true;
+}

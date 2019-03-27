@@ -7,6 +7,8 @@
 #include <CGAL/Polygon_mesh_processing/connected_components.h>
 #include <CGAL/Polygon_mesh_processing/self_intersections.h>
 #include <map>
+#include "loadprogressbar.h"
+#include <QApplication>
 using namespace std;
 
 MeshFix::MeshFix(QObject *parent):QObject(parent)
@@ -19,19 +21,44 @@ MeshFix::~MeshFix()
 
 void MeshFix::repair(Mesh &mesh)
 {
+    loadProgressBar progressbar("mesh repairing...");
+    connect(this,SIGNAL(progressReport(float,float)),&progressbar,SLOT(setProgressBar(float,float)));
     //缝合边界
+    progressbar.setLabelText("stitchBorders");
     stitchBorders(&mesh);
+    float fraction=0.1f;
+    emit progressReport(100*fraction,100.0f);
+    QApplication::processEvents();
+
     //去除小的连通域
+    progressbar.setLabelText("fixConnectivity");
     fixConnectivity(&mesh);
+    fraction=0.3f;
+    emit progressReport(100*fraction,100.0f);
+    QApplication::processEvents();
+
     //去除自相交面片
+    progressbar.setLabelText("selfIntersect");
     selfIntersect(&mesh);
+    fraction=0.6f;
+    emit progressReport(100*fraction,100.0f);
+    QApplication::processEvents();
+
     //填补洞
+    progressbar.setLabelText("holeFill");
     holeFill(&mesh);
+    fraction=0.9f;
+    emit progressReport(100*fraction,100.0f);
+    QApplication::processEvents();
+
     //修复法向
     if(CGAL::is_closed(mesh))
     {
         normalRepair(&mesh);
     }
+    fraction=1.0f;
+    emit progressReport(100*fraction,100.0f);
+    QApplication::processEvents();
 }
 
 void MeshFix::fixConnectivity(Mesh *mesh)
@@ -57,6 +84,7 @@ void MeshFix::fixConnectivity(Mesh *mesh)
     emit outputMsg("\t Number of vertices  :\t"+QString::number(mesh->num_vertices()));
     emit outputMsg("\t Number of halfedges :\t"+QString::number(mesh->num_halfedges()));
     emit outputMsg("\t Number of facets    :\t" +QString::number(mesh->num_faces()));
+    QApplication::processEvents();
 }
 
 void MeshFix::holeFill(Mesh *mesh)
@@ -92,6 +120,7 @@ void MeshFix::holeFill(Mesh *mesh)
     emit outputMsg( "\t Number of vertices  :\t" +QString::number(mesh->num_vertices()));
     emit outputMsg("\t Number of halfedges :\t"+QString::number(mesh->num_halfedges()));
     emit outputMsg("\t Number of facets    :\t"+QString::number(mesh->num_faces()));
+    QApplication::processEvents();
 }
 
 void MeshFix::normalRepair(Mesh *mesh)
@@ -102,11 +131,13 @@ void MeshFix::normalRepair(Mesh *mesh)
         CGAL::Polygon_mesh_processing::orient(*mesh);
         cout<<"normal error!"<<endl;
         emit outputMsg("normal error!");
+        QApplication::processEvents();
     }
     else
     {
         cout<<"normal right!"<<endl;
         emit outputMsg("normal right!");
+        QApplication::processEvents();
     }
 }
 
@@ -118,10 +149,12 @@ void MeshFix::selfIntersect(Mesh *mesh)
     if(intersecting)
     {
         emit outputMsg("There are self-intersections.");
+        QApplication::processEvents();
     }
     else
     {
         emit outputMsg("There is no self-intersection.");
+        QApplication::processEvents();
     }
     while(intersecting)
     {
@@ -129,6 +162,7 @@ void MeshFix::selfIntersect(Mesh *mesh)
         CGAL::Polygon_mesh_processing::self_intersections(*mesh,back_inserter(intersected_tris));
         cout << intersected_tris.size() << " pairs of triangles intersect." << std::endl;
         emit outputMsg(QString::number(intersected_tris.size())+"对三角形自相交.");
+        QApplication::processEvents();
         for(uint i=0;i<intersected_tris.size();i++)
         {
             Mesh::Face_index f0=intersected_tris[i].first;
@@ -173,10 +207,12 @@ void MeshFix::selfIntersect(Mesh *mesh)
         if(intersecting)
         {
             emit outputMsg("存在自相交.");
+            QApplication::processEvents();
         }
         else
         {
             emit outputMsg("There is no self-intersection.");
+            QApplication::processEvents();
         }
     }
     cout << "repairing selfintersection done : " <<endl;
@@ -188,6 +224,7 @@ void MeshFix::selfIntersect(Mesh *mesh)
     emit outputMsg("\t Number of vertices  :"+QString::number(mesh->number_of_vertices()));
     emit outputMsg("\t Number of halfedges :\t"+QString::number(mesh->number_of_halfedges()));
     emit outputMsg("\t Number of facets    :\t"+QString::number(mesh->number_of_faces()));
+    QApplication::processEvents();
 }
 
 void MeshFix::stitchBorders(Mesh *mesh)

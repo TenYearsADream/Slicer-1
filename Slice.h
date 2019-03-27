@@ -1,11 +1,12 @@
 ﻿#ifndef SLICE_H
 #define SLICE_H
 #include <QTime>
-#include <boost/any.hpp>
+//#include <boost/any.hpp>
 #include "dataset.h"
 #include "opencl.h"
 #include <QObject>
 using namespace std;
+class loadProgressBar;
 class Slice: public QObject
 {
     Q_OBJECT
@@ -22,11 +23,13 @@ public:
     void startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
 signals:
     void outputMsg(QString);
+    void progressReport(float fraction,float total);
 private:
     QTime time;
     float zheight;
     vector<float>z;
     int findtime,comptime,sorttime,createtime;
+    loadProgressBar *progressbar;
 
 private:
     void sliceByHeight(Mesh mesh,float zmin,float zmax,vector<Polylines> &intrpoints);

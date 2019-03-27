@@ -2,6 +2,8 @@
 #include <QTextStream>
 #include <QDebug>
 #include <QFile>
+#include "loadprogressbar.h"
+#include <QApplication>
 using namespace std;
 Slice::Slice(QObject *parent):QObject(parent)
 {
@@ -15,7 +17,7 @@ Slice::Slice(QObject *parent):QObject(parent)
 
 Slice::~Slice()
 {
-
+    delete(progressbar);
 }
 
 void Slice::startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
@@ -23,6 +25,8 @@ void Slice::startSlice(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     findtime=0;
     comptime=0;
     sorttime=0;
+    progressbar=new loadProgressBar("slice...");
+    connect(this,SIGNAL(progressReport(float,float)),progressbar,SLOT(setProgressBar(float,float)));
     if(sliceType=="CPU")
     {
         //sliceByHeight(mesh,zmin,zmax);
@@ -93,6 +97,9 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
         zheight += thick;
         layernumber++;
     }
+    float fraction=0.05f;
+    emit progressReport(100*fraction,100.0f);
+    QApplication::processEvents();
 
     //将所有半边分组
     time.start();
@@ -110,8 +117,13 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
         {
             edges[uint(j)].push_back(i);
         }
+        fraction=0.05f+float(i+1)/halfedge.size()*0.05f;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
     }
     findtime =time.elapsed();
+    progressbar->setLabelText("group edges done!");
+    QApplication::processEvents();
     cout<<"group edges done!"<<endl;
 
     //同组中的半边进行重排序，组成首尾相连的轮廓
@@ -188,9 +200,14 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             }
             //cout<<"The "<<i<<" layer:"<<locs.size()<<endl;
             location[i]=locs;
+            fraction=0.1f+float(i+1)/edges.size()*0.8f;
+            emit progressReport(100*fraction,100.0f);
+            QApplication::processEvents();
         }
     }
     sorttime =time.elapsed();
+    progressbar->setLabelText("sort edges done!");
+    QApplication::processEvents();
     cout<<"sort edges done!"<<endl;
 
     //计算每组中的半边和相应的z平面求交
@@ -224,8 +241,13 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             polylines.push_back(lines);
         }
         intrpoints.push_back(polylines);
+        fraction=0.9f+float(i+1)/layernumber*0.1f;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
     }
     comptime +=time.elapsed();
+    progressbar->setLabelText("intersect edges done!");
+    QApplication::processEvents();
     cout<<"intersect edges done!"<<endl;
 }
 
@@ -314,7 +336,9 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
         zheight += thick;
         layernumber++;
     }
-
+    float fraction=0.05f;
+    emit progressReport(100*fraction,100.0f);
+    QApplication::processEvents();
     //将所有半边分组
     time.start();
     size_t total=0;
@@ -333,6 +357,9 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             edges[uint(j)].push_back(i);
             total++;
         }
+        fraction=0.05f+float(i+1)/halfedge.size()*0.05f;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
     }
     while(edges.back().empty())
     {
@@ -341,8 +368,9 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     layernumber=edges.size();
     findtime =time.elapsed();
 //    cout<<"total: "<<total<<endl;
+    progressbar->setLabelText("group edges done!");
+    QApplication::processEvents();
     cout<<"group edges done!"<<endl;
-    emit outputMsg("group edges done!");
 
     QTime time2;
     time.restart();
@@ -364,9 +392,7 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     {
         cout << "Open failed." << endl;
     }
-
     QTextStream txtOutput(&f);
-
     while(endlayer<layernumber-1)
     {
         time2.start();
@@ -406,6 +432,11 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             endlayer=i;
         }
         f.close();
+
+        fraction=0.3f;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
+
         layerwidth=uint(linesnumber.size());
         createtime+=time2.elapsed();
         vector<uint>locationdata(uint(faceset.size()*1.1));
@@ -419,6 +450,10 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
         cout <<"loopcount : "<< loopcount.size() << " memory: " << sizeof(uint)*loopcount.size() / 1048576 << "M" << endl;
         cout <<"loopnumber : "<< loopnumber.size() << " memory: " << sizeof(uint)*loopnumber.size() / 1048576 << "M" << endl;
         opencl.executeKernel(faceset,linesnumber,hashTable,layerwidth,locationdata,loopcount,loopnumber);
+        fraction=0.8f;
+        emit progressReport(100*fraction,100.0f);
+        progressbar->setLabelText("sort edges done!");
+        QApplication::processEvents();
         //writeHash(hashTable);
         sorttime +=time.elapsed();
         time.restart();
@@ -507,7 +542,10 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     }
     cout<<"creat faceset time: "<<createtime<<"ms"<<endl;
     cout<<"sort edges done!"<<endl;
-    emit outputMsg("sort edges done!");
+    fraction=1.0f;
+    emit progressReport(100*fraction,100.0f);
+    progressbar->setLabelText("intersect edges done!");
+    QApplication::processEvents();
 }
 
 void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
@@ -523,6 +561,10 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
         zheight += thick;
         layernumber++;
     }
+    float fraction=0.05f;
+    emit progressReport(100*fraction,100.0f);
+    QApplication::processEvents();
+
     //将所有半边分组
     time.start();
     vector<vector<uint>>edges;
@@ -539,6 +581,9 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
         {
             edges[uint(j)].push_back(i);
         }
+        fraction=0.05f+float(i+1)/halfedge.size()*0.05f;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
     }
     while(edges.back().empty())
     {
@@ -546,8 +591,9 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
     }
     layernumber=edges.size();
     findtime =time.elapsed();
+    progressbar->setLabelText("group edges done!");
+    QApplication::processEvents();
     cout<<"group edges done!"<<endl;
-    emit outputMsg("group edges done!");
 
     //同组中的半边进行重排序，组成首尾相连的轮廓
     time.restart();
@@ -583,8 +629,6 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
 //                }
 //                cout<<endl;
 //            }
-
-
             int index=1,current=0,start=1;
             for(uint k=0;k<length;k++)
             {
@@ -641,11 +685,15 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
                 }
             }
             if(!locs.empty())location[i]=locs;
+            fraction=0.1f+float(i+1)/edges.size()*0.8f;
+            emit progressReport(100*fraction,100.0f);
+            QApplication::processEvents();
         }
     }
     sorttime =time.elapsed();
+    progressbar->setLabelText("sort edges done!");
+    QApplication::processEvents();
     cout<<"sort edges done!"<<endl;
-    emit outputMsg("sort edges done!");
 
     //计算每组中的半边和相应的z平面求交
     time.restart();
@@ -678,10 +726,14 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,floa
             polylines.push_back(lines);
         }
         intrpoints.push_back(polylines);
+        fraction=0.9f+float(i+1)/layernumber*0.1f;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
     }
     comptime +=time.elapsed();
+    progressbar->setLabelText("intersect edges done!");
+    QApplication::processEvents();
     cout<<"intersect edges done!"<<endl;
-    emit outputMsg("intersect edges done!");
 }
 
 void Slice::hashInsert(vector<cl_int3>& hashTable,uint key,uint value,uint length)

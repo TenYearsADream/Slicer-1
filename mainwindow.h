@@ -39,14 +39,12 @@ private slots:
     void timeUpdate();
 private:
     QAction *openStl,*saveStl;
-    ReadSTLFile readstl;
-    ReadOBJFile *readobj;
     MyGLWidget *opengl;
-    QWidget *toolWidget;
-    QVBoxLayout *toollayout;
-
     Slice slice;
     MeshFix meshfix;
+
+    QWidget *toolWidget;
+    QVBoxLayout *toollayout;
     QDoubleSpinBox *sliceSpinBox,*segSpinBox;
     QSlider *layerSlider ;
     QSpinBox *layerSpinBox;
@@ -54,7 +52,6 @@ private:
     QCheckBox *isAdapt;
     QComboBox *comboBox;
     QTextEdit *logEdit;
-
     QString slicepath;
 
 private:

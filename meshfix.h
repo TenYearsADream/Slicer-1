@@ -17,6 +17,8 @@ private:
     void holeFill(Mesh *mesh);
     void normalRepair(Mesh *mesh);
     void selfIntersect(Mesh *mesh);
+signals:
+    void progressReport(float fraction,float total);
 };
 
 #endif // MESHFIX_H

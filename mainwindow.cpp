@@ -39,13 +39,13 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent)
     mainlayout->setStretchFactor(opengl, 4);
     mainlayout->setStretchFactor(toolWidget,2);
 
+
     //模型摆放布局
     initPlaceWidget();
     //分层显示布局
     initSliceWidget();
     //模型分割布局
     initSegmentWidget();
-
     //日志打印窗口
     logEdit = new QTextEdit("slicer");
     toollayout->addWidget(logEdit);
@@ -66,7 +66,6 @@ MainWindow::~MainWindow()
 {
     delete(openStl);
     delete(opengl);
-    delete(readobj);
 }
 
 void MainWindow::initStatusBar()
@@ -247,7 +246,8 @@ void MainWindow::OpenStlFile()
         QString filesuffix=fileinfo.suffix();
         if(filesuffix=="stl" || filesuffix=="STL")
         {
-            if(!readstl.ReadStlFile(path,dataset))
+            ReadSTLFile readstl(dataset);
+            if(!readstl.ReadStlFile(path))
             {
                 cout<<"Failed to read STL file!"<<endl;
                 statusLabel->setText(tr("Failed to read STL file!"));
@@ -261,14 +261,14 @@ void MainWindow::OpenStlFile()
         }
         else if(filesuffix=="obj" || filesuffix=="OBJ")
         {
-            readobj=new ReadOBJFile(dataset);
-            if(!readobj->ReadObjFile(path))
+            ReadOBJFile readobj(dataset);
+            if(!readobj.ReadObjFile(path))
             {
                 cout<<"Failed to read OBJ file!"<<endl;
                 statusLabel->setText(tr("Failed to read OBJ file!"));
                 return;
             }
-            emit outputMsg("Model Size: "+QString::number(readobj->modelsize)+"M");
+            emit outputMsg("Model Size: "+QString::number(readobj.modelsize)+"M");
             emit outputMsg("File Type: OBJ");
         }
         else if(filesuffix=="off" || filesuffix=="OFF")
@@ -285,11 +285,11 @@ void MainWindow::OpenStlFile()
         }
         emit outputMsg(path);
         int readtime=time.elapsed()/1000;
-        emit outputMsg("time of readstl: "+QString::number(readtime)+"s");
+        emit outputMsg("time of read: "+QString::number(readtime)+"s");
         emit outputMsg("number of vertices: "+QString::number(dataset.mesh.number_of_vertices()));
         emit outputMsg("number of edges: "+QString::number(dataset.mesh.number_of_edges()));
         emit outputMsg("number of faces: "+QString::number(dataset.mesh.number_of_faces()));
-        qDebug()<<"time of readstl:"<<readtime<<"s";
+        qDebug()<<"time of read:"<<readtime<<"s";
         qDebug()<<"number of vertices:"<<dataset.mesh.number_of_vertices();
         qDebug()<<"number of edges:"<<dataset.mesh.number_of_edges();
         qDebug()<<"number of faces:"<<dataset.mesh.number_of_faces();

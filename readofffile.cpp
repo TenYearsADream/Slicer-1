@@ -1,14 +1,22 @@
 #include "readofffile.h"
 #include <dataset.h>
+#include "loadprogressbar.h"
 #include <QDebug>
 #include <QTextStream>
+#include <QApplication>
 ReadOFFFile::ReadOFFFile(dataSet &_dataset)
 {
     modelsize=0;
+    numberVertices=0;
+    numberTriangles=0;
+    isstop=false;
     dataset=&_dataset;
 }
 bool ReadOFFFile::ReadOffFile(const QString filename)
 {
+    loadProgressBar progressbar("read off...");
+    connect(this,SIGNAL(progressReport(float,float)),&progressbar,SLOT(setProgressBar(float,float)));
+    connect(&progressbar,SIGNAL(signalExit()),this,SLOT(ExitRead()));
     dataset->mesh.clear();
     QFile file(filename);
     QStringList list;
@@ -25,20 +33,31 @@ bool ReadOFFFile::ReadOffFile(const QString filename)
     list=line.split(" ");
     numberVertices=list[0].toUInt();
     numberTriangles=list[1].toUInt();
+    uint total=numberVertices+numberTriangles;
+    float fraction=0.0f;
     for(uint i=0;i<numberVertices;i++)
     {
         line = in.readLine();
         list=line.split(" ");
         addPoint(list);
+        fraction=float(i+1)/total;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
     }
     for(uint i=0;i<numberTriangles;i++)
     {
         line = in.readLine();
         list=line.split(" ");
         addFace(list);
+        fraction=float(numberVertices+i+1)/total;
+        emit progressReport(100*fraction,100.0f);
+        QApplication::processEvents();
     }
     file.close();
-    return true;
+    if(isstop)
+        return false;
+    else
+        return true;
 }
 
 void ReadOFFFile::addPoint(QStringList list)
@@ -63,4 +82,11 @@ void ReadOFFFile::addFace(QStringList list)
     Mesh::Vertex_index v1(point[1]);
     Mesh::Vertex_index v2(point[2]);
     dataset->mesh.add_face(v0,v1,v2);
+}
+void ReadOFFFile::ExitRead(){
+    modelsize=0;
+    numberVertices=0;
+    numberTriangles=0;
+    dataset->mesh.clear();
+    isstop=true;
 }

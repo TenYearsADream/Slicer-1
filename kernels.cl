@@ -90,7 +90,7 @@ void hashInsert(__global int4 *hashTable,int key,int value,uint length,uint hash
 		tmphash=hashTable[hashoffset+hashAddr];
 /* 		printf("key :%d tmphash.x: %d\n",key,tmphash.x);
 		printf("bool : %d\n",tmphash.x!=key); */
-		if(tmphash.x!=-2 && (tmphash.x!=key/length &&  tmphash.w!=key%length))  
+		if(tmphash.x!=-2 && (tmphash.x!=key/length || tmphash.w!=key%length))  
 		{				
 			hashAddr =(hashAddr+1)% length; 
 		}
@@ -118,7 +118,7 @@ void hashInsert(__global int4 *hashTable,int key,int value,uint length,uint hash
 int hashSearch(__global int4 *hashTable,int key,uint length,uint hashoffset)
 {
 	uint hashAddr =key % length;
-	while(hashTable[hashoffset+hashAddr].x!=key/length && hashTable[hashoffset+hashAddr].w!=key%length)
+	while(hashTable[hashoffset+hashAddr].x!=key/length || hashTable[hashoffset+hashAddr].w!=key%length)
     {
         hashAddr =(hashAddr+1) % length;
 		/* printf("key:%d,hashTable[hashoffset+hashAddr].x:%d, hashAddr:%d\n",key,hashTable[hashoffset+hashAddr].x,hashAddr); */

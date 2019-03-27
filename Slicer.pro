@@ -24,7 +24,8 @@ SOURCES += main.cpp\
     myglwidget.cpp \
     Slice.cpp \
     readobjfile.cpp \
-    readofffile.cpp
+    readofffile.cpp \
+    loadprogressbar.cpp
 
 HEADERS  += mainwindow.h \
     readstlfile.h \
@@ -34,7 +35,8 @@ HEADERS  += mainwindow.h \
     myglwidget.h \
     Slice.h \
     readobjfile.h \
-    readofffile.h
+    readofffile.h \
+    loadprogressbar.h
 
 RESOURCES += \
     res.qrc
