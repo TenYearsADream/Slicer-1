@@ -130,7 +130,7 @@ int hashSearch(__global int4 *hashTable,int key,uint length,uint hashoffset)
 	return hashAddr;
 }
 
-__kernel void hashfind(const __global uint *edgebuf,const __global uint *linesnumber,__global int4 *hashTable,
+__kernel void hashfind(const __global uint2 *edgebuf,const __global uint *linesnumber,__global int4 *hashTable,
 					   __global uint *location,__global uint *loopcount,__global uint *loopnumber)
 {
 	int i = get_global_id(0);
@@ -138,7 +138,7 @@ __kernel void hashfind(const __global uint *edgebuf,const __global uint *linesnu
 	uint loopcounttmp=0,loopnumbertmp=0;
 	uint length=0,hashoffset=0;
 	int key=0,key1=0;
-	uint loops=100000;
+	uint loops=10000;
 	/* if(i==0) */
 	{
 		if(i==0)
@@ -149,20 +149,20 @@ __kernel void hashfind(const __global uint *edgebuf,const __global uint *linesnu
 		else 
 		{
 			edgeoffset=linesnumber[i-1];
-			hashoffset = linesnumber[i-1];
+			hashoffset =2*linesnumber[i-1];
 		}
 		edgewidth=linesnumber[i]-edgeoffset;
-		length =edgewidth;
+		length =2*edgewidth;
 		/* printf("width of layer %d: %d\n",i,edgewidth); */
-		for(int j=0;j<edgewidth;j+=2)
+		for(int j=0;j<edgewidth;j++)
 		{
-			key=edgebuf[edgeoffset+j];
-			key1=edgebuf[edgeoffset+j+1];
+			key=edgebuf[edgeoffset+j].x;
+			key1=edgebuf[edgeoffset+j].y;
 			if(key>=0 && key1>=0)
 			{
 				/* printf("---key1 : %d, value : %d---key2 : %d, value : %d\n",key,j,key1,j+1); */
 				hashInsert(hashTable,key,j,length,hashoffset);
-				hashInsert(hashTable,key1,j+1,length,hashoffset);
+				hashInsert(hashTable,key1,j,length,hashoffset);
 			}
 		}
 /* 		if(i<2)
@@ -197,10 +197,10 @@ __kernel void hashfind(const __global uint *edgebuf,const __global uint *linesnu
 				loopnumbertmp=0;
 				index = hashTable[hashoffset+k].y;
 				start = hashTable[hashoffset+k].y;
-				current= current=edgebuf[edgeoffset+index];
+				current=edgebuf[edgeoffset+index].x;
 				num++;
-				/* printf("current: %d -- start: %d--num: %d\n",current,start,num); */
-				location[edgeoffset+num]=index;
+				/* printf("current: %d -- start: %d--num: %d\n",current,start,num); */	
+				location[edgeoffset+i*loops+num]=index;
 				loopnumbertmp++;
 				for(int iter=0;iter<length;iter++)
 				{
@@ -224,22 +224,15 @@ __kernel void hashfind(const __global uint *edgebuf,const __global uint *linesnu
 						/* printf("index= %d\n",index); */
 						break;
 					}
-					if((index & 1) == 0)
-					{
-						index +=1;
-					}
-					else{
-						index -=1;
-					}
 					/* printf("index= %d\n",index); */
 					if(start!=index && index>=0)
 					{
 						hashTable[hashoffset+ret].y=-2;
 						hashTable[hashoffset+ret].z=-2;
 						num++;
-						current=edgebuf[edgeoffset+index];
+						current=(edgebuf[edgeoffset+index].x!=current)?edgebuf[edgeoffset+index].x:edgebuf[edgeoffset+index].y;
 						/* printf("current: %d -- index: %d--num: %d\n",current,index,num); */
-						location[edgeoffset+num]=index;
+						location[edgeoffset+i*loops+num]=index;
 						loopnumbertmp++;						
 					}
 					else if(start==index)
@@ -248,7 +241,7 @@ __kernel void hashfind(const __global uint *edgebuf,const __global uint *linesnu
 						hashTable[hashoffset+ret].z=-2;
 						num++;
 						/* printf("current: %d -- index: %d--num: %d\n",current,index,num); */
-						location[edgeoffset+num]=index;
+						location[edgeoffset+i*loops+num]=index;
 						loopnumbertmp++;	
 						break;
 					} 

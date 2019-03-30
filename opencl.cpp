@@ -163,13 +163,13 @@ void OpenCL::executeKernel(cl::Buffer vertexbuf,cl::Buffer halfedgebuf,vector<un
     }
 }
 
-void OpenCL::executeKernel(vector<unsigned int> edges,vector<unsigned int>linesnumber,vector<cl_int3>&hashTable,unsigned int layernumber,
+void OpenCL::executeKernel(vector<cl_uint2> faceset,vector<unsigned int>linesnumber,vector<cl_int3>&hashTable,unsigned int layernumber,
                            vector<unsigned int>&location,vector<unsigned int>&loopcount,vector<unsigned int>&loopnumber)
 {
     cl_int err=0;
     QTime time;
     time.start();
-    cl::Buffer edgebuf(context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,edges.size()*sizeof(unsigned int),edges.data(),&err);
+    cl::Buffer edgebuf(context,CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,faceset.size()*sizeof(cl_uint2),faceset.data(),&err);
     if(err<0)
     {
         cout<<"can't creat edgebuf."<<err<<endl;

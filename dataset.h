@@ -42,7 +42,7 @@ public:
         vector<float> vertexnormals;
 
         vector<cl_float3> vertexset;
-        vector<cl_uint3>halfedgeset;
+        vector<cl_uint4>halfedgeset;
         multimap<float,Edge>edgeset;
         vector<cl_uint3> faceset;
 private:

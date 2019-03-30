@@ -174,21 +174,37 @@ void dataSet::halfedgeOnGpu()
         vertexset.push_back(v);
     }
     halfedgeset.clear();
-    halfedgeset.reserve(mesh.number_of_halfedges());
-    cl_uint3 h;
-    for(Mesh::Halfedge_index hi:mesh.halfedges())
+    halfedgeset.reserve(mesh.number_of_edges());
+    cl_uint4 h;
+//    for(Mesh::Halfedge_index hi:mesh.halfedges())
+//    {
+//        Mesh::Vertex_index v0=mesh.vertex(mesh.edge(hi),0);
+//        Mesh::Vertex_index v1=mesh.vertex(mesh.edge(hi),1);
+//        Mesh::Face_index f=mesh.face(hi);
+////        if(!f.is_valid())
+////        {
+////            cout<<f<<endl;
+////        }
+//        h.x=v0;
+//        h.y=v1;
+//        h.z=f;
+//        halfedgeset.push_back(h);
+//    }
+    for(uint i=0;i<mesh.number_of_halfedges();i+=2)
     {
+        Mesh::Halfedge_index hi(i);
         Mesh::Vertex_index v0=mesh.vertex(mesh.edge(hi),0);
         Mesh::Vertex_index v1=mesh.vertex(mesh.edge(hi),1);
-        Mesh::Face_index f=mesh.face(hi);
-//        if(!f.is_valid())
-//        {
-//            cout<<f<<endl;
-//        }
-        h.x=v0;
-        h.y=v1;
-        h.z=f;
-        halfedgeset.push_back(h);
+        Mesh::Face_index f0=mesh.face(hi);
+        Mesh::Face_index f1=mesh.face(Mesh::Halfedge_index(i+1));
+        if(f0.is_valid() && f1.is_valid())
+        {
+            h.x=v0;
+            h.y=v1;
+            h.z=f0;
+            h.w=f1;
+            halfedgeset.push_back(h);
+        }
     }
 }
 
