@@ -21,7 +21,7 @@ Slice::~Slice()
 }
 
 void Slice::startSlice(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
-{
+{    
     findtime=0;
     comptime=0;
     sorttime=0;
@@ -49,19 +49,27 @@ void Slice::startSlice(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
     if(sliceType=="GPU")
     {
         //sliceByGpu(vertex,halfedge,surroundBox,intrpoints);
-        sliceOnGpu(vertex,halfedge,surroundBox,intrpoints);
-        cout<<"find edge time:"<<findtime<<"ms"<<endl;
-        cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
-        cout<<"compute intersect time:"<<comptime<<"ms"<<endl;
-        cout<<"time of parallel computing:"<<findtime+sorttime+comptime<<"ms"<<endl;
-        emit outputMsg("find edge time: "+QString::number(findtime)+"ms");
-        emit outputMsg("sort edge time: "+QString::number(sorttime)+"ms");
-        emit outputMsg("compute intersect time: "+QString::number(comptime)+"ms");
-        emit outputMsg("GPU total time: "+QString::number(findtime+sorttime+comptime)+"ms");
-        if(genSlicesFile(slicepath[1],intrpoints,surroundBox))
+        bool success=sliceOnGpu(vertex,halfedge,surroundBox,intrpoints);
+        if(!success)
         {
-            emit outputMsg("slc file generated successfully to"+slicepath[1]+".");
-            cout<<"slc file generated successfully."<<endl;
+            emit outputMsg("failed to execute kernel on GPU");
+            return;
+        }
+        else
+        {
+            cout<<"find edge time:"<<findtime<<"ms"<<endl;
+            cout<<"sort edge time:"<<sorttime<<"ms"<<endl;
+            cout<<"compute intersect time:"<<comptime<<"ms"<<endl;
+            cout<<"time of parallel computing:"<<findtime+sorttime+comptime<<"ms"<<endl;
+            emit outputMsg("find edge time: "+QString::number(findtime)+"ms");
+            emit outputMsg("sort edge time: "+QString::number(sorttime)+"ms");
+            emit outputMsg("compute intersect time: "+QString::number(comptime)+"ms");
+            emit outputMsg("GPU total time: "+QString::number(findtime+sorttime+comptime)+"ms");
+            if(genSlicesFile(slicepath[1],intrpoints,surroundBox))
+            {
+                emit outputMsg("slc file generated successfully to"+slicepath[1]+".");
+                cout<<"slc file generated successfully."<<endl;
+            }
         }
     }
     if(sliceType=="CPU2")
@@ -117,9 +125,9 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
         {
             edges[uint(j)].push_back(i);
         }
-        fraction=0.05f+float(i+1)/halfedge.size()*0.05f;
-        emit progressReport(100*fraction,100.0f);
-        QApplication::processEvents();
+//        fraction=0.05f+float(i+1)/halfedge.size()*0.05f;
+//        emit progressReport(100*fraction,100.0f);
+//        QApplication::processEvents();
     }
     while(edges.back().empty())
     {
@@ -127,6 +135,8 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
     }
     layernumber=edges.size();
     findtime =time.elapsed();
+    fraction=0.1f;
+    emit progressReport(100*fraction,100.0f);
     progressbar->setLabelText("group edges done!");
     QApplication::processEvents();
     cout<<"group edges done!"<<endl;
@@ -208,12 +218,14 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
             }
             //cout<<"The "<<i<<" layer:"<<locs.size()<<endl;
             location[i]=locs;
-            fraction=0.1f+float(i+1)/edges.size()*0.8f;
-            emit progressReport(100*fraction,100.0f);
-            QApplication::processEvents();
+//            fraction=0.1f+float(i+1)/edges.size()*0.8f;
+//            emit progressReport(100*fraction,100.0f);
+//            QApplication::processEvents();
         }
     }
     sorttime =time.elapsed();
+    fraction=0.9f;
+    emit progressReport(100*fraction,100.0f);
     progressbar->setLabelText("sort edges done!");
     QApplication::processEvents();
     cout<<"sort edges done!"<<endl;
@@ -249,11 +261,13 @@ void Slice::sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
             polylines.push_back(lines);
         }
         intrpoints.push_back(polylines);
-        fraction=0.9f+float(i+1)/layernumber*0.1f;
-        emit progressReport(100*fraction,100.0f);
-        QApplication::processEvents();
+//        fraction=0.9f+float(i+1)/layernumber*0.1f;
+//        emit progressReport(100*fraction,100.0f);
+//        QApplication::processEvents();
     }
     comptime +=time.elapsed();
+    fraction=1.0f;
+    emit progressReport(100*fraction,100.0f);
     progressbar->setLabelText("intersect edges done!");
     QApplication::processEvents();
     cout<<"intersect edges done!"<<endl;
@@ -331,7 +345,7 @@ bool Slice::genSlicesFile(const QString fileName,const vector<Polylines> intrpoi
     return true;
 }
 
-void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
+bool Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints)
 {
     float zmin=surroundBox[4];
     float zmax=surroundBox[5];
@@ -343,6 +357,10 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
         z.push_back(zheight);
         zheight += thick;
         layernumber++;
+//        if(layernumber>179700)
+//        {
+//            cout<<layernumber<<endl;
+//        }
     }
     float fraction=0.05f;
     emit progressReport(100*fraction,100.0f);
@@ -376,6 +394,8 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
     layernumber=edges.size();
     findtime =time.elapsed();
 //    cout<<"total: "<<total<<endl;
+    fraction=0.1f;
+    emit progressReport(100*fraction,100.0f);
     progressbar->setLabelText("group edges done!");
     QApplication::processEvents();
     cout<<"group edges done!"<<endl;
@@ -394,8 +414,8 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
     vector<uint>linesnumber;
     linesnumber.reserve(layernumber);
     faceset.reserve(total);
-    const uint LOOPs=10000;
-    const uint MAXFACESETSIZE=uint(opencl.deviceinfo.maxMemAllocSize)*1024*1024/(4*sizeof(uint));
+    const uint LOOPs=20000;
+    const uint MAXFACESETSIZE=uint(opencl.deviceinfo.maxMemAllocSize)*1024*1024/(16*sizeof(uint));
 //    QFile f("C:/Users/xjtu_/Desktop/cpu.txt");
 //    if(!f.open(QIODevice::WriteOnly | QIODevice::Text))
 //    {
@@ -407,7 +427,7 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
         time2.start();
         linesnumber.clear();
         faceset.clear();
-        cout<<"startlayer: "<<startlayer<<endl;
+        //cout<<"startlayer: "<<startlayer<<endl;
         for(uint i=startlayer;i<layernumber;i++)
         {
             if(i>startlayer)
@@ -445,10 +465,10 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
         }
         //f.close();
 
-        fraction=0.3f;
-        emit progressReport(100*fraction,100.0f);
-        progressbar->setLabelText("prepare faceset data done!");
-        QApplication::processEvents();
+//        fraction=0.3f;
+//        emit progressReport(100*fraction,100.0f);
+//        progressbar->setLabelText("prepare faceset data done!");
+//        QApplication::processEvents();
 
         layerwidth=uint(linesnumber.size());
         createtime+=time2.elapsed();
@@ -462,14 +482,23 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
         cout <<"locationdata : "<< locationdata.size() << " memory: " << sizeof(uint)*locationdata.size() / 1048576 << "M" << endl;
         cout <<"loopcount : "<< loopcount.size() << " memory: " << sizeof(uint)*loopcount.size() / 1048576 << "M" << endl;
         cout <<"loopnumber : "<< loopnumber.size() << " memory: " << sizeof(uint)*loopnumber.size() / 1048576 << "M" << endl;
-        opencl.executeKernel(faceset,linesnumber,hashTable,layerwidth,locationdata,loopcount,loopnumber);
+        bool success=opencl.executeKernel(faceset,linesnumber,hashTable,layerwidth,locationdata,loopcount,loopnumber);
+        //writeHash(hashTable);
+        if(!success)
+        {
+            cout<<"failed to execute kernel on GPU"<<endl;
+            fraction=1.0f;
+            emit progressReport(100*fraction,100.0f);
+            progressbar->setLabelText("error!");
+            QApplication::processEvents();
+            return false;
+        }
+        sorttime +=time.elapsed();
         fraction=0.8f;
         emit progressReport(100*fraction,100.0f);
         progressbar->setLabelText("sort edges done!");
         QApplication::processEvents();
         cout<<"sort edges done!"<<endl;
-        //writeHash(hashTable);
-        sorttime +=time.elapsed();
         time.restart();
         uint hashoffset=0,edgeoffset=0;
 //        for(uint i=0;i<1;i++)
@@ -518,7 +547,7 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
 //            }
 //            cout<<endl;
             if(i==startlayer)edgeoffset=0;
-            else edgeoffset=linesnumber[i-startlayer-1]+i*LOOPs;
+            else edgeoffset=linesnumber[i-startlayer-1]+(i-startlayer)*LOOPs;
             polylines.clear();
             polylines.reserve(loopcount[i-startlayer]);
             uint offset=0,tmp=0;
@@ -533,6 +562,7 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
                 if(locationdata[edgeoffset+offset]==locationdata[edgeoffset+offset+loopnumber[(i-startlayer)*LOOPs+j]-1] && loopnumber[(i-startlayer)*LOOPs+j]>2)
 //                if(loopnumber[(i-startlayer)*LOOPs+j]>2)
                 {
+                    //cout<<"loopnumber: "<<loopnumber[(i-startlayer)*LOOPs+j]-1<<endl;
                     for(size_t k=0;k<loopnumber[(i-startlayer)*LOOPs+j]-1;k++)
                     {
                         tmp=locationdata[edgeoffset+offset+k];
@@ -561,15 +591,16 @@ void Slice::sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
     emit progressReport(100*fraction,100.0f);
     progressbar->setLabelText("intersect edges done!");
     QApplication::processEvents();
+    return true;
 }
 
-void Slice::hashInsert(vector<cl_int3>& hashTable,uint key,uint value,uint length)
+void Slice::hashInsert(vector<cl_int4>& hashTable,uint key,uint value,uint length)
 {
     uint hashAddr = key % length;
     //cout<<"key:"<<key<<", value:"<<value<<", hashAddr:"<<hashAddr<<endl;
     for(uint i=0;i<length;i++)    //循环，最大哈希表长度
     {
-        if(hashTable[hashAddr].x!=-1 && hashTable[hashAddr].x!=int(key))    //冲突
+        if(hashTable[hashAddr].x!=-1 && hashTable[hashAddr].x!=key)    //冲突
             hashAddr = (hashAddr+1) % length;   //开放定址法的线性探测法,查找下一个可存放数据的空间
         else
             break;
@@ -577,16 +608,16 @@ void Slice::hashInsert(vector<cl_int3>& hashTable,uint key,uint value,uint lengt
     //cout<<"hashAddr: "<<hashAddr<<endl;
     if(hashTable[hashAddr].x==-1)
     {
-        hashTable[hashAddr].x = int(key);
-        hashTable[hashAddr].y = int(value);
+        hashTable[hashAddr].x = key;
+        hashTable[hashAddr].y = value;
     }
-    else if(hashTable[hashAddr].x==int(key))
+    else if(hashTable[hashAddr].x==key)
     {
-        hashTable[hashAddr].z = int(value);
+        hashTable[hashAddr].z =value;
     }
 }
 
-int Slice::hashSearch(vector<cl_int3>hashTable,uint key,uint length)
+int Slice::hashSearch(vector<cl_int4>hashTable,uint key,uint length)
 {
     uint hashAddr = key % length;
     while(key!=uint(hashTable[hashAddr].x))
@@ -597,7 +628,7 @@ int Slice::hashSearch(vector<cl_int3>hashTable,uint key,uint length)
             return -1;
         }
     }
-    return int(hashAddr);
+    return hashAddr;
 }
 
 void Slice::writeHash(vector<cl_int4>hashTable)
@@ -646,13 +677,13 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
         int num2=int((z2-zmin)/thick);
         if(qAbs(z2-z1)<1e-8f)num2=num1-1;
         //cout<<z1<<" "<<z2<<" "<<num1<<" "<<num2<<" "<<zmin<<" "<<thick<<endl;
-        for(int j=num1;j<num2;j++)
+        for(int j=num1;j<=num2;j++)
         {
             edges[uint(j)].push_back(i);
         }
-        fraction=0.05f+float(i+1)/halfedge.size()*0.05f;
-        emit progressReport(100*fraction,100.0f);
-        QApplication::processEvents();
+//        fraction=0.05f+float(i+1)/halfedge.size()*0.05f;
+//        emit progressReport(100*fraction,100.0f);
+//        QApplication::processEvents();
     }
     while(edges.back().empty())
     {
@@ -660,6 +691,8 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
     }
     layernumber=edges.size();
     findtime =time.elapsed();
+    fraction=0.1f;
+    emit progressReport(100*fraction,100.0f);
     progressbar->setLabelText("group edges done!");
     QApplication::processEvents();
     cout<<"group edges done!"<<endl;
@@ -669,7 +702,7 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
     vector<vector<vector<uint>>> location;
     location.resize(layernumber);
     vector<vector<uint>>locs;
-    locs.reserve(100);
+    locs.reserve(1000);
     vector<uint> loc;
     for(uint i=0;i<layernumber;i++)
     {
@@ -681,8 +714,8 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
             continue;
         }
         //if(edges[i].size()>linesnumber)linesnumber=edges[i].size();
-        loc.reserve(edges[i].size());
-        uint length=uint(edges[i].size());
+        loc.reserve(2*edges[i].size());
+        uint length=2*uint(edges[i].size());
         vector<cl_int4> hashTable(length,{{-1,-1,-1,-1}});
         for(uint j=0;j<edges[i].size();j++)
         {
@@ -698,7 +731,7 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
 //            }
 //            cout<<endl;
 //        }
-        int index=1,current=0,start=1;
+        int index=1,current=0,start=1,ret=-1;
         for(uint k=0;k<length;k++)
         {
             if(hashTable[k].y!=-1)
@@ -710,7 +743,7 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
                 loc.push_back(uint(index));
                 for(uint iter=0;iter<length;iter++)
                 {
-                    int ret=hashSearch(hashTable,uint(current),length);
+                    ret=hashSearch(hashTable,uint(current),length);
                     if(ret == -1)
                     {
                         break;
@@ -727,10 +760,7 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
                     {
                         hashTable[ret].y=-1;
                         hashTable[ret].z=-1;
-                        if(halfedge[edges[i][index]].z!=current)
-                            current=halfedge[edges[i][index]].z;
-                        else
-                            current=halfedge[edges[i][index]].w;
+                        current=(halfedge[edges[i][index]].z!=current)?halfedge[edges[i][index]].z:halfedge[edges[i][index]].w;
                         loc.push_back(uint(index));
                     }
                     else if(start==index)
@@ -750,11 +780,13 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
             }
         }
         if(!locs.empty())location[i]=locs;
-        fraction=0.1f+float(i+1)/edges.size()*0.8f;
-        emit progressReport(100*fraction,100.0f);
-        QApplication::processEvents();
+//        fraction=0.1f+float(i+1)/edges.size()*0.8f;
+//        emit progressReport(100*fraction,100.0f);
+//        QApplication::processEvents();
     }
     sorttime =time.elapsed();
+    fraction=0.9f;
+    emit progressReport(100*fraction,100.0f);
     progressbar->setLabelText("sort edges done!");
     QApplication::processEvents();
     cout<<"sort edges done!"<<endl;
@@ -790,11 +822,13 @@ void Slice::sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,floa
             polylines.push_back(lines);
         }
         intrpoints.push_back(polylines);
-        fraction=0.9f+float(i+1)/layernumber*0.1f;
-        emit progressReport(100*fraction,100.0f);
-        QApplication::processEvents();
+//        fraction=0.9f+float(i+1)/layernumber*0.1f;
+//        emit progressReport(100*fraction,100.0f);
+//        QApplication::processEvents();
     }
     comptime +=time.elapsed();
+    fraction=1.0f;
+    emit progressReport(100*fraction,100.0f);
     progressbar->setLabelText("intersect edges done!");
     QApplication::processEvents();
     cout<<"intersect edges done!"<<endl;

@@ -148,9 +148,9 @@ void MainWindow::initSegmentWidget()
 void MainWindow::initSliceWidget()
 {
     sliceSpinBox = new QDoubleSpinBox(this);
-    sliceSpinBox->setRange(0.01, 20);  // 范围
-    sliceSpinBox->setDecimals(2);  // 精度
-    sliceSpinBox->setSingleStep(0.05); // 步长
+    sliceSpinBox->setRange(0.001, 20);  // 范围
+    sliceSpinBox->setDecimals(4);  // 精度
+    sliceSpinBox->setSingleStep(0.0001); // 步长
     QPushButton *sliceButton = new QPushButton(tr("slice"));
     connect(sliceButton,SIGNAL(clicked()),this,SLOT(modelSlice()));
     layerSlider = new QSlider(Qt::Horizontal);

@@ -138,7 +138,7 @@ __kernel void hashfind(const __global uint2 *edgebuf,const __global uint *linesn
 	uint loopcounttmp=0,loopnumbertmp=0;
 	uint length=0,hashoffset=0;
 	int key=0,key1=0;
-	uint loops=10000;
+	uint loops=20000;
 	/* if(i==0) */
 	{
 		if(i==0)
@@ -152,7 +152,7 @@ __kernel void hashfind(const __global uint2 *edgebuf,const __global uint *linesn
 			hashoffset =2*linesnumber[i-1];
 		}
 		edgewidth=linesnumber[i]-edgeoffset;
-		length =2*edgewidth;
+		length =2*edgewidth-1;
 		/* printf("width of layer %d: %d\n",i,edgewidth); */
 		for(int j=0;j<edgewidth;j++)
 		{

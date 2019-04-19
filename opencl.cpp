@@ -18,52 +18,59 @@ OpenCL::OpenCL()
     cl::Event profileEvent;
     // Place the GPU devices of the first platform into a context
     cl::Platform::get(&platforms);
-    platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
-    if(devices.empty())
+    if(!platforms.empty())
     {
-        platforms[0].getDevices(CL_DEVICE_TYPE_CPU, &devices);
+        platforms[0].getDevices(CL_DEVICE_TYPE_GPU, &devices);
+        if(devices.empty())
+        {
+            platforms[0].getDevices(CL_DEVICE_TYPE_CPU, &devices);
+        }
+        for(size_t i=0; i<devices.size(); i++)
+        {
+            string device_name = devices[i].getInfo<CL_DEVICE_NAME>();
+            cout << "Device: " << device_name.c_str() << endl;
+            cl_uint maxComputeUnits=devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+            cout << "Parallel compute units: " << maxComputeUnits<< endl;
+            size_t maxWorkItemPerGroup=devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
+            cout << "maxWorkItemPerGroup: " << maxWorkItemPerGroup<< endl;
+            cl_ulong maxGlobalMemSize=devices[i].getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
+            cout << "maxGlobalMemSize: " << maxGlobalMemSize/1024/1024<<"MB"<<endl;
+            cl_ulong maxConstantBufferSize=devices[i].getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
+            cout << "maxConstantBufferSize: " << maxConstantBufferSize/1024<<"KB"<<endl;
+            cl_ulong maxLocalMemSize=devices[i].getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
+            cout << "maxLocalMemSize: " << maxLocalMemSize/1024<<"KB"<<endl;
+            cl_ulong maxMemAllocSize=devices[i].getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
+            cout << "maxMemAllocSize: " << maxMemAllocSize/1024/1024<<"MB"<<endl;
+
+            deviceinfo.deviceName=device_name;
+            deviceinfo.maxComputeUnits=int(maxComputeUnits);
+            deviceinfo.maxWorkItemPerGroup=int(maxWorkItemPerGroup);
+            deviceinfo.maxGlobalMemSize=int(maxGlobalMemSize/1024/1024);
+            deviceinfo.maxConstantBufferSize=int(maxConstantBufferSize/1024);
+            deviceinfo.maxLocalMemSize=int(maxLocalMemSize/1024);
+            deviceinfo.maxMemAllocSize=int(maxMemAllocSize/1024/1024);
+        }
+        context=cl::Context(devices);
+
+        // Create kernel
+        std::ifstream programFile(PROGRAM_FILE);
+        string programString(istreambuf_iterator<char>(programFile),(istreambuf_iterator<char>()));
+        cl::Program::Sources source(1, make_pair(programString.c_str(),programString.length()+1));
+        cl::Program program(context, source);
+        program.build(devices);
+
+        capbyheight=cl::Kernel(program, CAPBYHEIGHT);
+        calalledges=cl::Kernel(program, CALALLEDGES);
+        groupedge=cl::Kernel(program, GROUPEDGE);
+        intersect=cl::Kernel(program,INTERSECT);
+        hashfind=cl::Kernel(program,HASHFIND);
+        /* Create a command queue */
+        queue=cl::CommandQueue(context, devices[0],CL_QUEUE_PROFILING_ENABLE);
     }
-    for(size_t i=0; i<devices.size(); i++)
+    else
     {
-        string device_name = devices[i].getInfo<CL_DEVICE_NAME>();
-        cout << "Device: " << device_name.c_str() << endl;
-        cl_uint maxComputeUnits=devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-        cout << "Parallel compute units: " << maxComputeUnits<< endl;
-        size_t maxWorkItemPerGroup=devices[i].getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>();
-        cout << "maxWorkItemPerGroup: " << maxWorkItemPerGroup<< endl;
-        cl_ulong maxGlobalMemSize=devices[i].getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
-        cout << "maxGlobalMemSize: " << maxGlobalMemSize/1024/1024<<"MB"<<endl;
-        cl_ulong maxConstantBufferSize=devices[i].getInfo<CL_DEVICE_MAX_CONSTANT_BUFFER_SIZE>();
-        cout << "maxConstantBufferSize: " << maxConstantBufferSize/1024<<"KB"<<endl;
-        cl_ulong maxLocalMemSize=devices[i].getInfo<CL_DEVICE_LOCAL_MEM_SIZE>();
-        cout << "maxLocalMemSize: " << maxLocalMemSize/1024<<"KB"<<endl;
-        cl_ulong maxMemAllocSize=devices[i].getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>();
-        cout << "maxMemAllocSize: " << maxMemAllocSize/1024/1024<<"MB"<<endl;
-
-        deviceinfo.deviceName=device_name;
-        deviceinfo.maxComputeUnits=int(maxComputeUnits);
-        deviceinfo.maxWorkItemPerGroup=int(maxWorkItemPerGroup);
-        deviceinfo.maxGlobalMemSize=int(maxGlobalMemSize/1024/1024);
-        deviceinfo.maxConstantBufferSize=int(maxConstantBufferSize/1024);
-        deviceinfo.maxLocalMemSize=int(maxLocalMemSize/1024);
-        deviceinfo.maxMemAllocSize=int(maxMemAllocSize/1024/1024);
+        cout<<"there is no available platform."<<endl;
     }
-    context=cl::Context(devices);
-
-    // Create kernel
-    std::ifstream programFile(PROGRAM_FILE);
-    string programString(istreambuf_iterator<char>(programFile),(istreambuf_iterator<char>()));
-    cl::Program::Sources source(1, make_pair(programString.c_str(),programString.length()+1));
-    cl::Program program(context, source);
-    program.build(devices);
-
-    capbyheight=cl::Kernel(program, CAPBYHEIGHT);
-    calalledges=cl::Kernel(program, CALALLEDGES);
-    groupedge=cl::Kernel(program, GROUPEDGE);
-    intersect=cl::Kernel(program,INTERSECT);
-    hashfind=cl::Kernel(program,HASHFIND);
-    /* Create a command queue */
-    queue=cl::CommandQueue(context, devices[0],CL_QUEUE_PROFILING_ENABLE);
 
 }
 
@@ -163,7 +170,7 @@ void OpenCL::executeKernel(cl::Buffer vertexbuf,cl::Buffer halfedgebuf,vector<un
     }
 }
 
-void OpenCL::executeKernel(vector<cl_uint2> faceset,vector<unsigned int>linesnumber,vector<cl_int3>&hashTable,unsigned int layernumber,
+bool OpenCL::executeKernel(vector<cl_uint2> faceset,vector<unsigned int>linesnumber,vector<cl_int3>&hashTable,unsigned int layernumber,
                            vector<unsigned int>&location,vector<unsigned int>&loopcount,vector<unsigned int>&loopnumber)
 {
     cl_int err=0;
@@ -228,5 +235,7 @@ void OpenCL::executeKernel(vector<cl_uint2> faceset,vector<unsigned int>linesnum
     if(err<0)
     {
         cout<<"can't read the buf. "<<err<<endl;
+        return false;
     }
+    return true;
 }

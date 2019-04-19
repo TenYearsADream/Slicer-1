@@ -18,6 +18,10 @@ ReadSTLFile::ReadSTLFile(dataSet &_dataset)
     numberVertices=0;
     verticesmap.clear();
 }
+ReadSTLFile::~ReadSTLFile()
+{
+
+}
 bool ReadSTLFile::ReadStlFile(const QString filename)
 {
     loadProgressBar progressbar("read stl...");
@@ -122,7 +126,7 @@ bool ReadSTLFile::ReadBinary(char *buffer)
         memcpy(&y,buffer, 4);buffer +=4;
         memcpy(&z,buffer, 4);buffer +=4;
         //cout<<x<<" "<<y<<" "<<z<<endl;
-        normalList.push_back(Point(x, y, z));//法向量
+        //normalList.push_back(Point(x, y, z));//法向量
         for (int j = 0; j < 3; j++)//读取三顶点
         {
             memcpy(&x,buffer, 4);buffer +=4;

@@ -35,7 +35,7 @@ private:
     void sliceByHeight(Mesh mesh,float zmin,float zmax,vector<Polylines> &intrpoints);
     void sliceByCpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
     bool genSlicesFile(const QString fileName,const vector<Polylines> intrpoints,float surroundBox[6]);
-    void sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
+    bool sliceOnGpu(vector<cl_float3> &vertex,vector<cl_uint3> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
     void sliceOnCpu(vector<cl_float3> &vertex,vector<cl_uint4> &halfedge,float surroundBox[6],vector<Polylines> &intrpoints);
     void hashInsert(vector<cl_int3>& hashTable,uint key,uint value,uint length);
     int hashSearch(vector<cl_int3>hashTable,uint key,uint length);

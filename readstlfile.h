@@ -17,6 +17,7 @@ public:
     QString filetype;
 public:
     explicit ReadSTLFile(dataSet &_dataset);
+    ~ReadSTLFile();
     bool ReadStlFile(const QString filename);
 private:
     QHash<QString,uint> verticesmap;
