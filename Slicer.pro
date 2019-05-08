@@ -42,32 +42,22 @@ RESOURCES += \
     res.qrc
 
 
-INCLUDEPATH += D:/Qt/boost_1_69_0
-INCLUDEPATH += D:/Qt/Eigen3.3.7
-INCLUDEPATH += D:/Qt/OpenCL/sdk/include
+INCLUDEPATH += $$PWD/resource/OpenCL/include
+LIBS += -L$$PWD/resource/OpenCL/lib/x64/ -lOpenCL
 
-LIBS += -L'D:/Qt/OpenCL/sdk/lib/x64' -lOpenCL
+INCLUDEPATH += $$PWD/resource/Eigen3.3.7
+INCLUDEPATH += $$PWD/resource/CGAL
+INCLUDEPATH += $$PWD/resource/CGAL/include
+INCLUDEPATH += $$PWD/resource/CGAL/gmp/include
 
-INCLUDEPATH += D:/Qt/CGAL-4.13/include
-INCLUDEPATH += D:/Qt/CGAL-4.13/auxiliary/gmp/include
-LIBS += -LD:/Qt/CGAL-4.13/auxiliary/gmp/lib/ -llibgmp-10
+LIBS += -L$$PWD/resource/CGAL/gmp/lib/ -llibgmp-10
 
-INCLUDEPATH += D:/Qt/CGAL/include
-LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL
-LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_ImageIO
-LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Core
-LIBS += -LD:/Qt/CGAL/lib/ -llibCGAL_Qt5
+LIBS += -L$$PWD/resource/CGAL/lib/ -llibCGAL.dll
+LIBS += -L$$PWD/resource/CGAL/lib/ -llibCGAL_Core.dll
+LIBS += -L$$PWD/resource/CGAL/lib/ -llibCGAL_Qt5.dll
+LIBS += -L$$PWD/resource/CGAL/lib/ -llibCGAL_ImageIO.dll
 
 QMAKE_CXXFLAGS_RELEASE += -O3
 
-#INCLUDEPATH += $$PWD/../../Qt/CGAL_VS/include
-#DEPENDPATH += $$PWD/../../Qt/CGAL_VS/include
 
-#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL_Core-vc140-mt-4.13
-#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL_Core-vc140-mt-gd-4.13
 
-#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL-vc140-mt-4.13
-#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL-vc140-mt-gd-4.13
-
-#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL_Qt5-vc140-mt-4.13
-#LIBS += -L$$PWD/../../Qt/CGAL_VS/lib/ -lCGAL_Qt5-vc140-mt-gd-4.13
